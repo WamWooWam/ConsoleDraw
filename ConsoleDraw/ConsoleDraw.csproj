@@ -43,13 +43,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Data\FrameBuffer.cs" />
-    <Compile Include="Data\FrameBufferGraphics.cs" />
-    <Compile Include="Data\FrameBufferPixel.cs" />
+    <Compile Include="FrameBuffer\FrameBuffer.cs" />
+    <Compile Include="FrameBuffer\FrameBufferGraphics.cs" />
+    <Compile Include="FrameBuffer\FrameBufferPixel.cs" />
     <Compile Include="Extensions\DebugExtension.cs" />
     <Compile Include="Interfaces\IDrawExtension.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="UI\Button.cs" />
+    <Compile Include="UI\Control.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
