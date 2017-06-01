@@ -21,6 +21,8 @@ namespace ConsoleDraw.Data
 
         public int Width => _fbWidth;
         public int Height => _fbHeight;
+        public int X => Console.CursorLeft;
+        public int Y => Console.CursorTop;
         public int DrawTime { get; private set; }
         public int DrawFPS { get; private set; }
         public int DrawnFrames { get; private set; }
