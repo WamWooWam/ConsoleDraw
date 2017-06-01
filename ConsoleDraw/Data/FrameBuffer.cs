@@ -14,11 +14,14 @@ namespace ConsoleDraw.Data
     {
         private int _fbWidth = 0;
         private int _fbHeight = 0;
+        private int _x = 0;
+        private int _y = 0;
         private FrameBufferPixel[] _frameBuffer;
         private Thread _drawThread;
         private Stopwatch _watch = new Stopwatch();
         private List<IDrawExtension> _drawExtensions = new List<IDrawExtension>();
-
+        public int X => _x;
+        public int Y => _y;
         public int Width => _fbWidth;
         public int Height => _fbHeight;
         public FrameBufferPixel[] RawPixels => _frameBuffer;
@@ -56,8 +59,8 @@ namespace ConsoleDraw.Data
                 Console.Write(_frameBuffer[i].Character);
             }
 
-            Console.CursorLeft = 0;
-            Console.CursorTop = 0;
+            Console.CursorLeft = _x;
+            Console.CursorTop = _y;
             
             try
             {
