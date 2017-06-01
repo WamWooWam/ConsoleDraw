@@ -21,7 +21,7 @@ namespace ConsoleDraw.Extensions
 
         public override void RunExtension()
         {
-            string toDraw = $"Draw time: {_buffer.DrawTime}ms, FPS: {_buffer.DrawFPS}";
+            string toDraw = $"Frames Drawn :{_buffer.DrawnFrames}, Draw time: {_buffer.DrawTime}ms, FPS: {_buffer.DrawFPS}";
 
             _graphics.DrawRect(new Rectangle(1, 1, toDraw.Length, 1), ConsoleColor.White);
             _graphics.DrawString(toDraw, new Point(1, 1), ConsoleColor.Black);
