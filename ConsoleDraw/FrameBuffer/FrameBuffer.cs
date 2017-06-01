@@ -15,7 +15,6 @@ namespace ConsoleDraw.Data
         private int _fbWidth = 0;
         private int _fbHeight = 0;
         private FrameBufferPixel[] _previousFrameBuffer;
-        public FrameBufferPixel[] _frameBuffer;
         private Thread _drawThread;
         private Stopwatch _watch = new Stopwatch();
         private List<IDrawExtension> _drawExtensions = new List<IDrawExtension>();
@@ -25,6 +24,7 @@ namespace ConsoleDraw.Data
         public int DrawTime { get; private set; }
         public int DrawFPS { get; private set; }
         public int DrawnFrames { get; private set; }
+        public FrameBufferPixel[] _frameBuffer;
 
         public void Init(int width, int height)
         {
@@ -75,18 +75,23 @@ namespace ConsoleDraw.Data
                         }
                     }
                 }
+
                 Console.CursorLeft = 0;
                 Console.CursorTop = 0;
+
+                _previousFrameBuffer = _frameBuffer;
+
+                if (15 - _watch.ElapsedMilliseconds > 0)
+                    Thread.Sleep(15 - (int)_watch.ElapsedMilliseconds);
 
                 try
                 {
                     DrawTime = (int)_watch.ElapsedMilliseconds;
-                    DrawFPS = 1000 / (int)_watch.ElapsedMilliseconds;
+                    DrawFPS += 1000 / (int)_watch.ElapsedMilliseconds;
+                    DrawFPS /= 2;
                     DrawnFrames += 1;
                 }
                 catch { }
-
-                _previousFrameBuffer = _frameBuffer;
             }
             else
             {
