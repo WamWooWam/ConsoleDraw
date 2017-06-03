@@ -20,7 +20,7 @@ namespace ConsoleDraw.Extensions
 
         public override void RunExtension()
         {
-            File.WriteAllText($"{DateTime.Now.Ticks}.json", JsonConvert.SerializeObject(_buffer._frameBuffer));
+            File.WriteAllText($"{DateTime.Now.Ticks}.json", JsonConvert.SerializeObject(_buffer.RawFrameBuffer));
         }
     }
 }

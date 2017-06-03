@@ -15,6 +15,7 @@ namespace ConsoleDraw.Data
         private int _fbWidth = 0;
         private int _fbHeight = 0;
         private FrameBufferPixel[] _previousFrameBuffer;
+        private FrameBufferPixel[] _drawingFramebuffer;
         private Thread _drawThread;
         private Stopwatch _watch = new Stopwatch();
         private List<IDrawExtension> _drawExtensions = new List<IDrawExtension>();
@@ -23,26 +24,49 @@ namespace ConsoleDraw.Data
         public int Height => _fbHeight;
         public int X => Console.CursorLeft;
         public int Y => Console.CursorTop;
+
         public int DrawTime { get; private set; }
         public int DrawFPS { get; private set; }
         public int DrawnFrames { get; private set; }
-        public FrameBufferPixel[] _frameBuffer;
+        public bool UseFrameLimiter { get; set; } = true;
+        public FrameBufferPixel[] RawFrameBuffer { get; set; }
+
+        public int FrameLimit
+        {
+            get
+            {
+                return (_frameLimitMS + 1) * 1000;
+            }
+            set
+            {
+                _frameLimitMS = 1000 / (value - 1);
+            }
+        }
+
+        private int _frameLimitMS = 16;
 
         public void Init(int width, int height)
         {
             _fbWidth = width; _fbHeight = height;
-            _frameBuffer = new FrameBufferPixel[_fbWidth * _fbHeight];
-            for (int i = 0; i < _frameBuffer.Length; i++)
+            RawFrameBuffer = new FrameBufferPixel[_fbWidth * _fbHeight];
+            for (int i = 0; i < RawFrameBuffer.Length; i++)
             {
-                _frameBuffer[i] = new FrameBufferPixel() { BackgroundColour = ConsoleColor.Black, Character = ' ' };
+                RawFrameBuffer[i] = new FrameBufferPixel() { BackgroundColour = ConsoleColor.Black, Character = ' ' };
             }
             _previousFrameBuffer = new FrameBufferPixel[_fbWidth * _fbHeight];
+            _drawingFramebuffer = new FrameBufferPixel[_fbWidth * _fbHeight];
         }
 
         public void Run()
         {
             Console.CursorVisible = false;
-            _drawThread = new Thread(() => { while (true) { Draw(); } });
+            _drawThread = new Thread(() =>
+            {
+                while (true)
+                {
+                    Draw();
+                }
+            });
             _drawThread.Start();
         }
 
@@ -53,52 +77,50 @@ namespace ConsoleDraw.Data
             foreach (IDrawExtension draw in _drawExtensions)
                 draw.RunExtension();
 
-            if (_previousFrameBuffer != _frameBuffer)
+            lock (RawFrameBuffer)
             {
-                lock (_frameBuffer)
+                RawFrameBuffer.CopyTo(_drawingFramebuffer, 0);
+                for (int i = 0; i < _fbHeight; i++)
                 {
-                    for (int i = 0; i < _fbHeight; i++)
+                    for (int j = 0; j < _fbWidth; j++)
                     {
-                        for (int j = 0; j < _fbWidth; j++)
+                        int index = (j + (i * _fbWidth)).Clamp(0, _drawingFramebuffer.Length - 1);
+                        if (_drawingFramebuffer[index] != _previousFrameBuffer[index])
                         {
-                            int index = (j + (i * _fbWidth)).Clamp(0, _frameBuffer.Length - 1);
-                            if (_frameBuffer[index] != _previousFrameBuffer[index])
+                            try
                             {
-                                try
-                                {
-                                    Console.CursorLeft = j;
-                                    Console.CursorTop = i;                                    
-                                    Console.BackgroundColor = _frameBuffer[index].BackgroundColour;
-                                    Console.ForegroundColor = _frameBuffer[index].ForegroundColour;
-                                    Console.Write(_frameBuffer[index].Character);
-                                }
-                                catch { }
+                                Console.CursorLeft = j;
+                                Console.CursorTop = i;
+                                Console.BackgroundColor = _drawingFramebuffer[index].BackgroundColour;
+                                Console.ForegroundColor = _drawingFramebuffer[index].ForegroundColour;
+                                Console.Write(_drawingFramebuffer[index].Character);
+                                _previousFrameBuffer[index] = _drawingFramebuffer[index];
                             }
+                            catch { }
                         }
                     }
+
                 }
-
-                Console.CursorLeft = 0;
-                Console.CursorTop = 0;
-
-                _previousFrameBuffer = _frameBuffer;
-
-                if (15 - _watch.ElapsedMilliseconds > 0)
-                    Thread.Sleep(15 - (int)_watch.ElapsedMilliseconds);
-
-                try
-                {
-                    DrawTime = (int)_watch.ElapsedMilliseconds;
-                    DrawFPS += 1000 / (int)_watch.ElapsedMilliseconds;
-                    DrawFPS /= 2;
-                    DrawnFrames += 1;
-                }
-                catch { }
             }
-            else
+            Console.CursorLeft = 0;
+            Console.CursorTop = 0;
+
+
+            if (UseFrameLimiter)
             {
-                Thread.Sleep(50);
+                if (_frameLimitMS - _watch.ElapsedMilliseconds > 0)
+                    Thread.Sleep(_frameLimitMS - (int)_watch.ElapsedMilliseconds);
             }
+
+            try
+            {
+                DrawTime = (int)_watch.ElapsedMilliseconds;
+                DrawFPS += 1000 / (int)_watch.ElapsedMilliseconds;
+                DrawFPS /= 2;
+                DrawnFrames += 1;
+            }
+            catch { }
+
 
             _watch.Reset();
         }

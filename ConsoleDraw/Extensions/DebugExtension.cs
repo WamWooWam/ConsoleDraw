@@ -6,12 +6,15 @@ using System.Text;
 using System.Threading.Tasks;
 using ConsoleDraw.Data;
 using System.Drawing;
+using System.Diagnostics;
 
 namespace ConsoleDraw.Extensions
 {
     public class DebugExtension : IDrawExtension
     {
         private FrameBufferGraphics _graphics;
+        private Process _process = Process.GetCurrentProcess();
+        string _toDraw;
 
         public DebugExtension(FrameBuffer buffer, FrameBufferGraphics graphics)
         {
@@ -21,10 +24,15 @@ namespace ConsoleDraw.Extensions
 
         public override void RunExtension()
         {
-            string toDraw = $"Frames Drawn :{_buffer.DrawnFrames}, Draw time: {_buffer.DrawTime}ms, FPS: {_buffer.DrawFPS}";
+            _toDraw = $"Frames Drawn :{_buffer.DrawnFrames}, Draw time: {_buffer.DrawTime.ToString("000")}ms, FPS: {_buffer.DrawFPS.ToString("000")}";
 
-            _graphics.DrawRect(new Rectangle(1, 1, toDraw.Length, 1), ConsoleColor.White);
-            _graphics.DrawString(toDraw, new Point(1, 1), ConsoleColor.Black);
+            _graphics.DrawRect(new Rectangle(1, 1, _toDraw.Length, 1), ConsoleColor.White);
+            _graphics.DrawString(_toDraw, new Point(1, 1), ConsoleColor.Black);
+
+            _toDraw = $"Allocated RAM: {_process.WorkingSet64 / 1024L}KB";            
+
+            _graphics.DrawRect(new Rectangle(1, 2, _toDraw.Length, 1), ConsoleColor.White);
+            _graphics.DrawString(_toDraw, new Point(1, 2), ConsoleColor.Black);
         }
     }
 }

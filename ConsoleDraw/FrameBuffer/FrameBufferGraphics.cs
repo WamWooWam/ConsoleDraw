@@ -10,6 +10,7 @@ namespace ConsoleDraw.Data
     public class FrameBufferGraphics
     {
         private FrameBuffer _frameBuffer;
+        private FrameBufferPixel[] _fbToModify;
 
         /// <summary>
         /// Initialises a Graphics object based on a framebuffer
@@ -18,6 +19,7 @@ namespace ConsoleDraw.Data
         public void Init(FrameBuffer frameBuffer)
         {
             _frameBuffer = frameBuffer;
+            _fbToModify = new FrameBufferPixel[_frameBuffer.Width * _frameBuffer.Height];
         }
 
         /// <summary>
@@ -38,13 +40,7 @@ namespace ConsoleDraw.Data
         /// <param name="character">The character to draw with</param>
         public void DrawRect(Rectangle rect, ConsoleColor bgColour, ConsoleColor fgColour = ConsoleColor.Gray, char character = ' ')
         {
-            if (rect.X < 0 || rect.X > _frameBuffer.Width)
-                throw new ArgumentException("X cannot be less than 0 or greater than the framebuffer width", "rext.X");
-            if (rect.Y < 0 || rect.Y > _frameBuffer.Width)
-                throw new ArgumentException("Y cannot be less than 0 or greater than the framebuffer height", "rext.Y");
-
-            FrameBufferPixel[] fbToModify = new FrameBufferPixel[_frameBuffer.Width * _frameBuffer.Height];
-            _frameBuffer._frameBuffer.CopyTo(fbToModify, 0);
+            _frameBuffer.RawFrameBuffer.CopyTo(_fbToModify, 0);
 
             int intialPoint = (rect.X) + (rect.Y * _frameBuffer.Width);
             for (int i = 0; i < rect.Height; i++)
@@ -52,14 +48,74 @@ namespace ConsoleDraw.Data
                 for (int j = 0; j < rect.Width; j++)
                 {
                     int newPoint = j + (i * _frameBuffer.Width) + intialPoint;
-                    fbToModify[newPoint] = new FrameBufferPixel() { BackgroundColour = bgColour, ForegroundColour = fgColour, Character = character };
+                    if (newPoint < _fbToModify.Length)
+                    {
+                        FrameBufferPixel pixel = new FrameBufferPixel() { BackgroundColour = bgColour, ForegroundColour = fgColour, Character = character };
+                        _fbToModify[newPoint] = pixel;
+                    }
                 }
             }
 
-            _frameBuffer._frameBuffer = fbToModify;
+            _frameBuffer.RawFrameBuffer = _fbToModify;
         }
 
-        public void DrawBorder(Rectangle rect, ConsoleColor bgColour, int Width, ConsoleColor fgColour = ConsoleColor.Gray, char character = ' ')
+        /// <summary>
+        /// Draws the outile of an ellipse. Thanks to 0x3F!
+        /// </summary>
+        /// <param name="center">The center point of the ellipse</param>
+        /// <param name="xRadius">The radius of the ellipse on the X axis</param>
+        /// <param name="yRadius">The radius of the ellipse on the Y axis</param>
+        /// <param name="bgColour">The background colour</param>
+        /// <param name="fgColour">The foreground colour</param>
+        /// <param name="character">The character to draw with</param>
+        public void DrawEllipse(Point center, int xRadius, int yRadius, ConsoleColor bgColour, ConsoleColor fgColour = ConsoleColor.Gray, char character = ' ')
+        {
+            _frameBuffer.RawFrameBuffer.CopyTo(_fbToModify, 0);
+
+            double angle = 0.0;
+            double anglestepsize = 0.008;
+
+            while (angle < 2 * Math.PI)
+            {
+                int x1 = (int)(center.X + xRadius * Math.Cos(angle));
+                int y1 = (int)(center.Y + yRadius * Math.Sin(angle));
+
+                angle += anglestepsize;
+
+                int newPoint = x1 + (y1 * _frameBuffer.Width);
+                if (newPoint >= 0 && newPoint < _fbToModify.Length)
+                {
+                    FrameBufferPixel pixel = new FrameBufferPixel() { BackgroundColour = bgColour, ForegroundColour = fgColour, Character = character };
+                    _fbToModify[newPoint] = pixel;
+                }
+            }
+
+            _frameBuffer.RawFrameBuffer = _fbToModify;
+        }
+
+        /// <summary>
+        /// Draws an ellipse. Thanks to 0x3F!
+        /// </summary>
+        /// <param name="center">The center point of the ellipse</param>
+        /// <param name="xRadius">The radius of the ellipse on the X axis</param>
+        /// <param name="yRadius">The radius of the ellipse on the Y axis</param>
+        /// <param name="bgColour">The background colour</param>
+        /// <param name="fgColour">The foreground colour</param>
+        /// <param name="character">The character to draw with</param>
+        public void FillEllipse(Point center, int xRadius, int yRadius, ConsoleColor bgColour, ConsoleColor fgColour = ConsoleColor.Gray, char character = ' ')
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Draws a border line
+        /// </summary>
+        /// <param name="rect">The rectangle to draw</param>
+        /// <param name="bgColour">The background colour</param>
+        /// <param name="width">The background colour</param>
+        /// <param name="fgColour">The foreground colour</param>
+        /// <param name="character">The character to draw with</param>
+        public void DrawBorder(Rectangle rect, int width, ConsoleColor bgColour, ConsoleColor fgColour = ConsoleColor.Gray, char character = ' ')
         {
             DrawRect(rect, bgColour, fgColour, character);
             DrawRect(new Rectangle(rect.X + 1, rect.Y + 1, rect.Width - 2, rect.Height - 2), ConsoleColor.Black, ConsoleColor.Black, character);
@@ -79,13 +135,21 @@ namespace ConsoleDraw.Data
 
             foreach (string lineToDraw in lines)
             {
-                if(lines.IndexOf(lineToDraw) < rect.Height)
+                if (lines.IndexOf(lineToDraw) < rect.Height)
                     DrawString(lineToDraw, new Point(rect.X, rect.Y + lines.IndexOf(lineToDraw)), fgColour);
             }
 
             return lines.Count;
         }
 
+        /// <summary>
+        /// Splits a string into lines of a specified length
+        /// TODO: Optimise
+        /// </summary>
+        /// <param name="text">The text to split</param>
+        /// <param name="width">The maximum length of any one line</param>
+        /// <param name="hyphenate">Split words and hyphenate or not.</param>
+        /// <returns>A list containing the split strings.</returns>
         public List<string> GetLines(string text, int width, bool hyphenate = false)
         {
             List<string> lines = new List<string>();
@@ -148,14 +212,20 @@ namespace ConsoleDraw.Data
             return lines;
         }
 
+        /// <summary>
+        /// Draws a string to the screen
+        /// </summary>
+        /// <param name="text">The string to draw</param>
+        /// <param name="point">The point to begin drawing at</param>
+        /// <param name="fgColour">The colour to draw with</param>
         public void DrawString(string text, Point point, ConsoleColor fgColour = ConsoleColor.Gray)
         {
             int intialPoint = (point.X) + (point.Y * _frameBuffer.Width);
             for (int j = 0; j < text.Length; j++)
             {
                 int newPoint = j + intialPoint;
-                FrameBufferPixel currentPoint = _frameBuffer._frameBuffer[newPoint];
-                _frameBuffer._frameBuffer[newPoint] = new FrameBufferPixel() { BackgroundColour = currentPoint.BackgroundColour, ForegroundColour = fgColour, Character = text[j] };
+                FrameBufferPixel currentPoint = _frameBuffer.RawFrameBuffer[newPoint];
+                _frameBuffer.RawFrameBuffer[newPoint] = new FrameBufferPixel() { BackgroundColour = currentPoint.BackgroundColour, ForegroundColour = fgColour, Character = text[j] };
             }
         }
     }
