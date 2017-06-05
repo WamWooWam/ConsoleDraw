@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using System.IO;
 using Newtonsoft.Json;
+using ConsoleDraw.Properties;
 
 namespace ConsoleDraw
 {
@@ -54,7 +55,7 @@ namespace ConsoleDraw
                 graph.Init(buffer);
 
                 buffer.AddDrawExtension(new DebugExtension(buffer, graph));
-                buffer.AddDrawExtension(new FrameDumpExtension(buffer));
+                //buffer.AddDrawExtension(new FrameDumpExtension(buffer));
 
                 buffer.Run();
 
@@ -97,7 +98,7 @@ namespace ConsoleDraw
                     new Rectangle(buffer.Width - 53, 6 + lines + lines2, 50, 6), ConsoleColor.Red);
 
                 int welcomeLines = graph.GetLines(
-                    "Welcome to ConsoleDraw, a library designed to make CLI a whole shit ton easier. Designed by WamWooWam, Bitmaps by Nikitpad.",
+                    "Welcome to ConsoleDraw, a library designed to make CLI a whole shit ton easier. Designed by WamWooWam, Bitmaps by nikitpad. Circles/Ellipses by 0x3F",
                     50,
                     true).Count;
 
@@ -107,12 +108,17 @@ namespace ConsoleDraw
                 graph.DrawRect(new Rectangle(3, buffer.Height - welcomeLines - 3, 51, welcomeLines), ConsoleColor.DarkRed);
 
                 graph.DrawMultiLineString(
-                    "Welcome to ConsoleDraw, a library designed to make CLI a whole shit ton easier. Designed by WamWooWam, Bitmaps by Nikitpad. Circles/Ellipses by 0x3F",
+                    "Welcome to ConsoleDraw, a library designed to make CLI a whole shit ton easier. Designed by WamWooWam, Bitmaps by nikitpad. Circles/Ellipses by 0x3F",
                     new Rectangle(3, buffer.Height - 6, 51, 6), ConsoleColor.White, true);
 
                 Random rand = new Random();
                 Rectangle rect = new Rectangle(buffer.Width - 54, 3, 52, totalLines + 2);
                 graph.FillEllipse(new Point((rect.Width / 2) + rect.X, (rect.Height / 2) + rect.Y + 20), 26, 10, ConsoleColor.Blue);
+                graph.DrawEllipse(new Point((rect.Width / 2) + rect.X, (rect.Height / 2) + rect.Y + 20), 26, 10, ConsoleColor.DarkBlue);
+
+                Bitmap img = Resources.CriticalError;
+                img.MakeTransparent(Color.FromArgb(255, 0, 255));
+                graph.DrawImage(img, new Point(buffer.Width - 17, buffer.Height - 17));
 
                 //while (true)
                 //{

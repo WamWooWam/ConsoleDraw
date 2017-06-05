@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ConsoleDraw.Tools;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -48,13 +49,44 @@ namespace ConsoleDraw.Data
                 for (int j = 0; j < rect.Width; j++)
                 {
                     int newPoint = j + (i * _frameBuffer.Width) + intialPoint;
-                    if (newPoint < _fbToModify.Length)
+                    if (newPoint > 0 && newPoint < _fbToModify.Length)
                     {
                         FrameBufferPixel pixel = new FrameBufferPixel() { BackgroundColour = bgColour, ForegroundColour = fgColour, Character = character };
                         _fbToModify[newPoint] = pixel;
                     }
                 }
             }
+
+            _frameBuffer.RawFrameBuffer = _fbToModify;
+        }
+
+        /// <summary>
+        /// Draws an image to the current framebuffer. Thanks nikitpad!
+        /// </summary>
+        /// <param name="image">The image to draw</param>
+        /// <param name="point">The point to draw the image at</param>
+        public void DrawImage(Image image, Point point)
+        {
+            _frameBuffer.RawFrameBuffer.CopyTo(_fbToModify, 0);
+
+            int intialPoint = (point.X) + (point.Y * _frameBuffer.Width);
+            try
+            {
+                Bitmap bmp = (Bitmap)image;
+                byte[] data = ColourTools.ImageTo4Bit(bmp);
+                for (int i = 0; i < bmp.Height; i++)
+                {
+                    for (int j = 0; j < bmp.Width; j++)
+                    {
+                        int newPoint = i + (j * _frameBuffer.Width) + intialPoint;
+                        if (i < _frameBuffer.Height && j < _frameBuffer.Width && newPoint < _frameBuffer.RawFrameBuffer.Length)
+                        {
+                            _fbToModify[newPoint] = FrameBufferPixel.FromByte(data[i + (j * bmp.Width)]);
+                        }
+                    }
+                }
+            }
+            catch { throw new Exception("Exception! Make sure your image is valid."); }
 
             _frameBuffer.RawFrameBuffer = _fbToModify;
         }
@@ -94,7 +126,7 @@ namespace ConsoleDraw.Data
         }
 
         /// <summary>
-        /// Draws an ellipse. Thanks to 0x3F!
+        /// Draws an ellipse. Thanks to 0x3F & nikitpad!
         /// </summary>
         /// <param name="center">The center point of the ellipse</param>
         /// <param name="xRadius">The radius of the ellipse on the X axis</param>
@@ -142,6 +174,7 @@ namespace ConsoleDraw.Data
 
             return lines.Count;
         }
+
 
         /// <summary>
         /// Splits a string into lines of a specified length

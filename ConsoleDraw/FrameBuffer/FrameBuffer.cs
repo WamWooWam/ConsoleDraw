@@ -1,4 +1,5 @@
 ﻿using ConsoleDraw.Interfaces;
+using ConsoleDraw.Tools;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -44,45 +45,7 @@ namespace ConsoleDraw.Data
         }
 
         private int _frameLimitMS = 16;
-        private static Color[] RGBDosColors =
-        {
-            Color.FromArgb(0,0,0),
-            Color.FromArgb(0,0,0xa8),
-            Color.FromArgb(0,0xa8,0),
-            Color.FromArgb(0,0xa8,0xa8),
-            Color.FromArgb(0xa8,0,0),
-            Color.FromArgb(0xa8,0,0xa8),
-            Color.FromArgb(0xa8,0xa8,0),
-            Color.FromArgb(0xa8,0xa8,0xa8),
-            Color.FromArgb(0x54,0x54,0x54),
-            Color.FromArgb(0x54,0x54,0xff),
-            Color.FromArgb(0x54,0xff,0x54),
-            Color.FromArgb(0x54,0xff,0xff),
-            Color.FromArgb(0xff,0x54,0x54),
-            Color.FromArgb(0xff,0x54,0xff),
-            Color.FromArgb(0xff,0xff,0x54),
-            Color.FromArgb(255,255,255)
-        };
-        private static double ColorDistance(Color a, Color b) => Math.Sqrt(Math.Pow(a.R - b.R, 2) + Math.Pow(a.G - b.G, 2) + Math.Pow(a.B - b.B, 2));
-        private static int NearestColorIndex(Color a, Color[] b)
-        {
-            int nearest = 0;
-            for (int i = 0; i < b.Length; i++)
-            {
-                if(ColorDistance(a, b[i]) < ColorDistance(a, b[nearest]))
-			        nearest = i;
-            }
-            return nearest;
-        }
-        private static byte[] ImageTo4Bit(Bitmap bmp)
-        {
-            int j = 0;
-            byte[] buffer = new byte[bmp.Width * bmp.Height];
-            for (int y = 0; bmp.Height > y; y++)
-                for (int x = 0; bmp.Width > x; x++, j++)
-                    buffer[j] = (byte)NearestColorIndex(bmp.GetPixel(x, y),RGBDosColors);
-            return buffer;
-        }
+
         public static FrameBuffer FromFile(string path)
         {
             try 
@@ -90,12 +53,13 @@ namespace ConsoleDraw.Data
                 Bitmap bmp = (Bitmap)Image.FromFile(path);
                 FrameBuffer fb = new FrameBuffer();
                 fb.Init(bmp.Width, bmp.Height);
-                byte[] data = ImageTo4Bit(bmp);
+                byte[] data = ColourTools.ImageTo4Bit(bmp);
                 for (int i = 0; bmp.Width * bmp.Height > i; i++)
                     fb.RawFrameBuffer[i] = FrameBufferPixel.FromByte(data[i]);
                 return fb;
             } catch { throw new Exception("Exception! Make sure your image is valid."); }
         }
+
         public void Init(int width, int height)
         {
             _fbWidth = width; _fbHeight = height;
