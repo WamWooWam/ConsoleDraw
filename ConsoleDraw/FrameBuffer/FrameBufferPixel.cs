@@ -11,5 +11,6 @@ namespace ConsoleDraw.Data
         public char Character { get; set; }
         public ConsoleColor ForegroundColour { get; set; }
         public ConsoleColor BackgroundColour { get; set; }
+        public static FrameBufferPixel FromByte(byte b) => new FrameBufferPixel() { BackgroundColour = (ConsoleColor)b, ForegroundColour = (ConsoleColor)b };
     }
 }
