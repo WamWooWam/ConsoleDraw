@@ -104,7 +104,8 @@ namespace ConsoleDraw.Data
         /// <param name="character">The character to draw with</param>
         public void FillEllipse(Point center, int xRadius, int yRadius, ConsoleColor bgColour, ConsoleColor fgColour = ConsoleColor.Gray, char character = ' ')
         {
-            throw new NotImplementedException();
+            for (int i = xRadius; 0 < i; i--)
+                DrawEllipse(center, i, yRadius, bgColour, fgColour, character);
         }
 
         /// <summary>
