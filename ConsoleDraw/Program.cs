@@ -116,8 +116,11 @@ namespace ConsoleDraw
                 graph.FillEllipse(new Point((rect.Width / 2) + rect.X, (rect.Height / 2) + rect.Y + 20), 26, 10, ConsoleColor.Blue);
                 graph.DrawEllipse(new Point((rect.Width / 2) + rect.X, (rect.Height / 2) + rect.Y + 20), 26, 10, ConsoleColor.DarkBlue);
 
-                graph.PseudoGraphics = false;
-                graph.DrawImage(Image.FromFile(@"NoteHS.png"), new Point(50, 50));
+                graph.PseudoGraphics = true;
+                Image img = Image.FromFile(@"C:\Users\Thomas\Downloads\win98.png");
+                if (img.Width > buffer.Width || img.Height > buffer.Height)
+                    img = img.GetThumbnailImage((int)(((double)img.Width / (double)img.Height) * buffer.Width).Clamp(1, buffer.Width), (int)(((double)img.Height / (double)img.Width) * buffer.Height).Clamp(1, buffer.Height), null, IntPtr.Zero);
+                graph.DrawImage(img, new Point(0, 0));
 
                 //while (true)
                 //{

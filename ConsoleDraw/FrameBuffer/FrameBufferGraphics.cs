@@ -13,7 +13,7 @@ namespace ConsoleDraw.Data
         private FrameBuffer _frameBuffer;
         private FrameBufferPixel[] _fbToModify;
 
-        public bool PseudoGraphics { get; set; } = true;
+        public bool PseudoGraphics { get; set; }
 
         /// <summary>
         /// Initialises a Graphics object based on a framebuffer
@@ -76,24 +76,22 @@ namespace ConsoleDraw.Data
             {
                 Bitmap bmp = (Bitmap)image;
                 byte[] data = ColourTools.ImageTo4Bit(bmp);
-                for (int i = 0; i < bmp.Height; i++)
+                for (int x = 0; bmp.Width > x; x++)
                 {
-                    for (int j = 0; j < bmp.Width; j++)
+                    for (int y = 0; bmp.Height > y; y++)
                     {
-                        int newPoint = i + (j * _frameBuffer.Width) + intialPoint;
-                        if (i < _frameBuffer.Height && j < _frameBuffer.Width && newPoint < _frameBuffer.RawFrameBuffer.Length)
+                        int newPoint = x + (y * _frameBuffer.Width) + intialPoint;
+                        try
                         {
-                            try
-                            {
+                            if (newPoint >= 0 && newPoint < _fbToModify.Length && x < bmp.Width && (y + (PseudoGraphics ? 1 : 0)) < bmp.Height)
                                 _fbToModify[newPoint] = new FrameBufferPixel()
                                 {
-                                    BackgroundColour = (ConsoleColor)ColourTools.NearestColorIndex(bmp.GetPixel(i, j), ColourTools.RGBDosColors),
-                                    Character = PseudoGraphics ? (char)0x2592 : ' ',
-                                    ForegroundColour = (ConsoleColor)ColourTools.NearestColorIndex(bmp.GetPixel(i, j + 1), ColourTools.RGBDosColors)
+                                    ForegroundColour = (ConsoleColor)ColourTools.NearestColorIndex(bmp.GetPixel(x, y + (PseudoGraphics ? 1 : 0)), ColourTools.RGBDosColors),
+                                    BackgroundColour = (ConsoleColor)ColourTools.NearestColorIndex(bmp.GetPixel(x, y), ColourTools.RGBDosColors),
+                                    Character = PseudoGraphics ? (char)0x2592 : ' '
                                 };
-                            }
-                            catch { }
                         }
+                        catch { }
                     }
                 }
             }
