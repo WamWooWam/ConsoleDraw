@@ -13,6 +13,8 @@ namespace ConsoleDraw.Data
         private FrameBuffer _frameBuffer;
         private FrameBufferPixel[] _fbToModify;
 
+        public bool PseudoGraphics { get; set; } = true;
+
         /// <summary>
         /// Initialises a Graphics object based on a framebuffer
         /// </summary>
@@ -81,7 +83,16 @@ namespace ConsoleDraw.Data
                         int newPoint = i + (j * _frameBuffer.Width) + intialPoint;
                         if (i < _frameBuffer.Height && j < _frameBuffer.Width && newPoint < _frameBuffer.RawFrameBuffer.Length)
                         {
-                            _fbToModify[newPoint] = FrameBufferPixel.FromByte(data[i + (j * bmp.Width)]);
+                            try
+                            {
+                                _fbToModify[newPoint] = new FrameBufferPixel()
+                                {
+                                    BackgroundColour = (ConsoleColor)ColourTools.NearestColorIndex(bmp.GetPixel(i, j), ColourTools.RGBDosColors),
+                                    Character = PseudoGraphics ? (char)0x2592 : ' ',
+                                    ForegroundColour = (ConsoleColor)ColourTools.NearestColorIndex(bmp.GetPixel(i, j + 1), ColourTools.RGBDosColors)
+                                };
+                            }
+                            catch { }
                         }
                     }
                 }

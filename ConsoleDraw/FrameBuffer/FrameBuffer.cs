@@ -57,12 +57,12 @@ namespace ConsoleDraw.Data
                 {
                     try
                     {
-                            fb.RawFrameBuffer[x + (y * bmp.Width)] = new FrameBufferPixel()
-                            {
-                                ForegroundColour = (ConsoleColor)NearestColorIndex(bmp.GetPixel(x, y + (enablePseudoGraphics ? 1 : 0)), RGBDosColors),
-                                BackgroundColour = (ConsoleColor)NearestColorIndex(bmp.GetPixel(x, y), RGBDosColors),
-                                Character = enablePseudoGraphics ? (char)0x2592 : ' '
-                            };
+                        fb.RawFrameBuffer[x + (y * bmp.Width)] = new FrameBufferPixel()
+                        {
+                            ForegroundColour = (ConsoleColor)ColourTools.NearestColorIndex(bmp.GetPixel(x, y + (enablePseudoGraphics ? 1 : 0)), ColourTools.RGBDosColors),
+                            BackgroundColour = (ConsoleColor)ColourTools.NearestColorIndex(bmp.GetPixel(x, y), ColourTools.RGBDosColors),
+                            Character = enablePseudoGraphics ? (char)0x2592 : ' '
+                        };
                     }
                     catch { }
                 }

@@ -116,9 +116,8 @@ namespace ConsoleDraw
                 graph.FillEllipse(new Point((rect.Width / 2) + rect.X, (rect.Height / 2) + rect.Y + 20), 26, 10, ConsoleColor.Blue);
                 graph.DrawEllipse(new Point((rect.Width / 2) + rect.X, (rect.Height / 2) + rect.Y + 20), 26, 10, ConsoleColor.DarkBlue);
 
-                Bitmap img = Resources.CriticalError;
-                img.MakeTransparent(Color.FromArgb(255, 0, 255));
-                graph.DrawImage(img, new Point(buffer.Width - 17, buffer.Height - 17));
+                graph.PseudoGraphics = false;
+                graph.DrawImage(Image.FromFile(@"NoteHS.png"), new Point(50, 50));
 
                 //while (true)
                 //{

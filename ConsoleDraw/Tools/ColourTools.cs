@@ -8,7 +8,7 @@ namespace ConsoleDraw.Tools
 {
     public static class ColourTools
     {
-        private static Color[] RGBDosColors =
+        public static Color[] RGBDosColors =
         {
             Color.FromArgb(0,0,0),
             Color.FromArgb(0,0,0xa8),
