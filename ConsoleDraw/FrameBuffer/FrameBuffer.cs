@@ -46,18 +46,28 @@ namespace ConsoleDraw.Data
 
         private int _frameLimitMS = 16;
 
-        public static FrameBuffer FromFile(string path)
+        public static FrameBuffer FromFile(string path, bool enablePseudoGraphics = false)
         {
-            try 
-            { 
-                Bitmap bmp = (Bitmap)Image.FromFile(path);
-                FrameBuffer fb = new FrameBuffer();
-                fb.Init(bmp.Width, bmp.Height);
-                byte[] data = ColourTools.ImageTo4Bit(bmp);
-                for (int i = 0; bmp.Width * bmp.Height > i; i++)
-                    fb.RawFrameBuffer[i] = FrameBufferPixel.FromByte(data[i]);
-                return fb;
-            } catch { throw new Exception("Exception! Make sure your image is valid."); }
+            Bitmap bmp = (Bitmap)Image.FromFile(path);
+            FrameBuffer fb = new FrameBuffer();
+            fb.Init(bmp.Width, bmp.Height);
+            for (int x = 0; bmp.Width > x; x++)
+            {
+                for (int y = 0; bmp.Height > y; y++)
+                {
+                    try
+                    {
+                            fb.RawFrameBuffer[x + (y * bmp.Width)] = new FrameBufferPixel()
+                            {
+                                ForegroundColour = (ConsoleColor)NearestColorIndex(bmp.GetPixel(x, y + (enablePseudoGraphics ? 1 : 0)), RGBDosColors),
+                                BackgroundColour = (ConsoleColor)NearestColorIndex(bmp.GetPixel(x, y), RGBDosColors),
+                                Character = enablePseudoGraphics ? (char)0x2592 : ' '
+                            };
+                    }
+                    catch { }
+                }
+            }
+            return fb;
         }
 
         public void Init(int width, int height)
