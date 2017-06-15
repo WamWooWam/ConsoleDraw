@@ -9,29 +9,62 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace ConsoleDraw.Data
+namespace ConsoleDraw
 {
     public class FrameBuffer : IDisposable
     {
-        private int _fbWidth = 0;
-        private int _fbHeight = 0;
-        private FrameBufferPixel[] _previousFrameBuffer;
-        private FrameBufferPixel[] _drawingFramebuffer;
-        private Thread _drawThread;
-        private Stopwatch _watch = new Stopwatch();
-        private List<IDrawExtension> _drawExtensions = new List<IDrawExtension>();
+        private int _fbWidth = 0; // The internal frame buffer width
+        private int _fbHeight = 0; // The internal frame buffer height
+        private FrameBufferPixel[] _previousFrameBuffer; // Storage for the previously drawn framebuffer, aids performance
+        private FrameBufferPixel[] _drawingFramebuffer; // The framebuffer being drawn.
+        private Thread _drawThread; // The thread we're using to draw
+        private Stopwatch _watch = new Stopwatch(); // A stopwatch. For draw time.
+        private List<IDrawExtension> _drawExtensions = new List<IDrawExtension>(); // Any loaded draw extensions
 
+        /// <summary>
+        /// The framebuffer width.
+        /// </summary>
         public int Width => _fbWidth;
+        /// <summary>
+        /// The framebuffer height.
+        /// </summary>
         public int Height => _fbHeight;
+        /// <summary>
+        /// The current cursor X position.
+        /// </summary>
         public int X => Console.CursorLeft;
+        /// <summary>
+        /// The current cursor Y position.
+        /// </summary>
         public int Y => Console.CursorTop;
 
+        /// <summary>
+        /// The draw time of the previous frame in milliseconds
+        /// </summary>
         public int DrawTime { get; private set; }
+        /// <summary>
+        /// The current draw framerate
+        /// </summary>
         public int DrawFPS { get; private set; }
-        public int DrawnFrames { get; private set; }
+        /// <summary>
+        /// A count of frames drawn
+        /// </summary>
+        public long DrawnFrames { get; private set; }
+        /// <summary>
+        /// Turns the framelimiter on or off
+        /// </summary>
         public bool UseFrameLimiter { get; set; } = true;
+        /// <summary>
+        /// The raw <see cref="FrameBufferPixel"/>s. You shouldn't directly draw to this.
+        /// Use <see cref="FrameBufferGraphics"/> instead.
+        /// </summary>
         public FrameBufferPixel[] RawFrameBuffer { get; set; }
 
+        private int _frameLimitMS = 16; // Internal frame limit in milliseconds
+
+        /// <summary>
+        /// The frame limit in FPS
+        /// </summary>
         public int FrameLimit
         {
             get
@@ -44,8 +77,13 @@ namespace ConsoleDraw.Data
             }
         }
 
-        private int _frameLimitMS = 16;
-
+        /// <summary>
+        /// Loads a <see cref="FrameBuffer"/> from a file.
+        /// Should not be used to display images on an existing <see cref="FrameBuffer"/>. See <see cref="FrameBufferGraphics.DrawImage(Image, Point)"/>
+        /// </summary>
+        /// <param name="path">Path to the image to draw</param>
+        /// <param name="enablePseudoGraphics">Turns colour approximation on or off</param>
+        /// <returns>A <see cref="FrameBuffer"/> created from the <paramref name="path"/>.</returns>
         public static FrameBuffer FromFile(string path, bool enablePseudoGraphics = false)
         {
             Bitmap bmp = (Bitmap)Image.FromFile(path);
@@ -70,6 +108,11 @@ namespace ConsoleDraw.Data
             return fb;
         }
 
+        /// <summary>
+        /// Sets up a new <see cref="FrameBuffer"/>
+        /// </summary>
+        /// <param name="width">Width of the new <see cref="FrameBuffer"/></param>
+        /// <param name="height">Height of the new <see cref="FrameBuffer"/></param>
         public void Init(int width, int height)
         {
             _fbWidth = width; _fbHeight = height;
@@ -82,6 +125,9 @@ namespace ConsoleDraw.Data
             _drawingFramebuffer = new FrameBufferPixel[_fbWidth * _fbHeight];
         }
 
+        /// <summary>
+        /// Starts draw loop
+        /// </summary>
         public void Run()
         {
             Console.CursorVisible = false;
@@ -95,6 +141,9 @@ namespace ConsoleDraw.Data
             _drawThread.Start();
         }
 
+        /// <summary>
+        /// Draws the <see cref="FrameBuffer"/> to the console
+        /// </summary>
         public void Draw()
         {
             _watch.Start();
@@ -150,11 +199,18 @@ namespace ConsoleDraw.Data
             _watch.Reset();
         }
 
+        /// <summary>
+        /// Adds an <see cref="IDrawExtension"/> to the <see cref="FrameBuffer"/>'s draw pipeline
+        /// </summary>
+        /// <param name="extension">The <see cref="IDrawExtension"/> to add</param>
         public void AddDrawExtension(IDrawExtension extension)
         {
             _drawExtensions.Add(extension);
         }
 
+        /// <summary>
+        /// Stops drawing the <see cref="FrameBuffer"/> and resets the console.
+        /// </summary>
         public void Dispose()
         {
             if ((_drawThread?.IsAlive).GetValueOrDefault())

@@ -4,12 +4,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using ConsoleDraw.Data;
 using System.Drawing;
 using System.Diagnostics;
 
 namespace ConsoleDraw.Extensions
 {
+    /// <summary>
+    /// An extension that shows framerate and draw time.
+    /// </summary>
     public class DebugExtension : IDrawExtension
     {
         private FrameBufferGraphics _graphics;

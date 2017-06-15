@@ -6,19 +6,22 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ConsoleDraw.Data
+namespace ConsoleDraw
 {
     public class FrameBufferGraphics
     {
         private FrameBuffer _frameBuffer;
         private FrameBufferPixel[] _fbToModify;
 
+        /// <summary>
+        /// Enables or disables colour approximations
+        /// </summary>
         public bool PseudoGraphics { get; set; }
 
         /// <summary>
-        /// Initialises a Graphics object based on a framebuffer
+        /// Initialises a <see cref="FrameBufferGraphics"/> object based on a <see cref="FrameBuffer"/>
         /// </summary>
-        /// <param name="frameBuffer">The frame buffer.</param>
+        /// <param name="frameBuffer">The <see cref="FrameBuffer"/>.</param>
         public void Init(FrameBuffer frameBuffer)
         {
             _frameBuffer = frameBuffer;
@@ -26,7 +29,7 @@ namespace ConsoleDraw.Data
         }
 
         /// <summary>
-        /// Clears the framebuffer, filling it with a specific colour
+        /// Clears the <see cref="FrameBuffer"/>, filling it with a specific colour
         /// </summary>
         /// <param name="colour"></param>
         public void Clear(ConsoleColor colour = ConsoleColor.Black)
@@ -63,7 +66,7 @@ namespace ConsoleDraw.Data
         }
 
         /// <summary>
-        /// Draws an image to the current framebuffer. Thanks nikitpad!
+        /// Draws an image to the current <see cref="FrameBuffer"/>. Thanks nikitpad!
         /// </summary>
         /// <param name="image">The image to draw</param>
         /// <param name="point">The point to draw the image at</param>
