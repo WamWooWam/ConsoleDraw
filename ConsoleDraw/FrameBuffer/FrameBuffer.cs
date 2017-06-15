@@ -11,60 +11,27 @@ using System.Threading.Tasks;
 
 namespace ConsoleDraw
 {
-    public class FrameBuffer : IDisposable
+        public class FrameBuffer : IDisposable
     {
-        private int _fbWidth = 0; // The internal frame buffer width
-        private int _fbHeight = 0; // The internal frame buffer height
-        private FrameBufferPixel[] _previousFrameBuffer; // Storage for the previously drawn framebuffer, aids performance
-        private FrameBufferPixel[] _drawingFramebuffer; // The framebuffer being drawn.
-        private Thread _drawThread; // The thread we're using to draw
-        private Stopwatch _watch = new Stopwatch(); // A stopwatch. For draw time.
-        private List<IDrawExtension> _drawExtensions = new List<IDrawExtension>(); // Any loaded draw extensions
+        private int _fbWidth = 0;
+        private int _fbHeight = 0;
+        private FrameBufferPixel[] _previousFrameBuffer;
+        private FrameBufferPixel[] _drawingFramebuffer;
+        private Thread _drawThread;
+        private Stopwatch _watch = new Stopwatch();
+        private List<IDrawExtension> _drawExtensions = new List<IDrawExtension>();
 
-        /// <summary>
-        /// The framebuffer width.
-        /// </summary>
         public int Width => _fbWidth;
-        /// <summary>
-        /// The framebuffer height.
-        /// </summary>
         public int Height => _fbHeight;
-        /// <summary>
-        /// The current cursor X position.
-        /// </summary>
         public int X => Console.CursorLeft;
-        /// <summary>
-        /// The current cursor Y position.
-        /// </summary>
         public int Y => Console.CursorTop;
 
-        /// <summary>
-        /// The draw time of the previous frame in milliseconds
-        /// </summary>
         public int DrawTime { get; private set; }
-        /// <summary>
-        /// The current draw framerate
-        /// </summary>
         public int DrawFPS { get; private set; }
-        /// <summary>
-        /// A count of frames drawn
-        /// </summary>
-        public long DrawnFrames { get; private set; }
-        /// <summary>
-        /// Turns the framelimiter on or off
-        /// </summary>
+        public int DrawnFrames { get; private set; }
         public bool UseFrameLimiter { get; set; } = true;
-        /// <summary>
-        /// The raw <see cref="FrameBufferPixel"/>s. You shouldn't directly draw to this.
-        /// Use <see cref="FrameBufferGraphics"/> instead.
-        /// </summary>
         public FrameBufferPixel[] RawFrameBuffer { get; set; }
 
-        private int _frameLimitMS = 16; // Internal frame limit in milliseconds
-
-        /// <summary>
-        /// The frame limit in FPS
-        /// </summary>
         public int FrameLimit
         {
             get
@@ -77,15 +44,10 @@ namespace ConsoleDraw
             }
         }
 
-        /// <summary>
-        /// Loads a <see cref="FrameBuffer"/> from a file.
-        /// Should not be used to display images on an existing <see cref="FrameBuffer"/>. See <see cref="FrameBufferGraphics.DrawImage(Image, Point)"/>
-        /// </summary>
-        /// <param name="path">Path to the image to draw</param>
-        /// <param name="enablePseudoGraphics">Turns colour approximation on or off</param>
-        /// <returns>A <see cref="FrameBuffer"/> created from the <paramref name="path"/>.</returns>
+        private int _frameLimitMS = 16;
         public static FrameBuffer FromFile(string path, bool enablePseudoGraphics = false)
         {
+            
             Bitmap bmp = (Bitmap)Image.FromFile(path);
             FrameBuffer fb = new FrameBuffer();
             fb.Init(bmp.Width, bmp.Height);
@@ -95,24 +57,19 @@ namespace ConsoleDraw
                 {
                     try
                     {
-                        fb.RawFrameBuffer[x + (y * bmp.Width)] = new FrameBufferPixel()
-                        {
-                            ForegroundColour = (ConsoleColor)ColourTools.NearestColorIndex(bmp.GetPixel(x, y + (enablePseudoGraphics ? 1 : 0)), ColourTools.RGBDosColors),
-                            BackgroundColour = (ConsoleColor)ColourTools.NearestColorIndex(bmp.GetPixel(x, y), ColourTools.RGBDosColors),
-                            Character = enablePseudoGraphics ? (char)0x2592 : ' '
-                        };
+                            if(!enablePseudoGraphics) fb.RawFrameBuffer[x + (y * bmp.Width)] = new FrameBufferPixel()
+                            {
+                                ForegroundColour = (ConsoleColor)NearestColorIndex(bmp.GetPixel(x, y), RGBDosColors.Keys.ToArray()),
+                                BackgroundColour = (ConsoleColor)NearestColorIndex(bmp.GetPixel(x, y), RGBDosColors.Keys.ToArray()),
+                                Character = enablePseudoGraphics ? (char)0x2592 : ' '
+                            };
+                            else fb.RawFrameBuffer[x + (y * bmp.Width)] = RGBDosColors[RGBDosColors.Keys.ToArray()[NearestColorIndex(bmp.GetPixel(x, y), RGBDosColors.Keys.ToArray())]];
                     }
                     catch { }
                 }
             }
             return fb;
         }
-
-        /// <summary>
-        /// Sets up a new <see cref="FrameBuffer"/>
-        /// </summary>
-        /// <param name="width">Width of the new <see cref="FrameBuffer"/></param>
-        /// <param name="height">Height of the new <see cref="FrameBuffer"/></param>
         public void Init(int width, int height)
         {
             _fbWidth = width; _fbHeight = height;
@@ -125,9 +82,6 @@ namespace ConsoleDraw
             _drawingFramebuffer = new FrameBufferPixel[_fbWidth * _fbHeight];
         }
 
-        /// <summary>
-        /// Starts draw loop
-        /// </summary>
         public void Run()
         {
             Console.CursorVisible = false;
@@ -141,9 +95,6 @@ namespace ConsoleDraw
             _drawThread.Start();
         }
 
-        /// <summary>
-        /// Draws the <see cref="FrameBuffer"/> to the console
-        /// </summary>
         public void Draw()
         {
             _watch.Start();
@@ -199,23 +150,59 @@ namespace ConsoleDraw
             _watch.Reset();
         }
 
-        /// <summary>
-        /// Adds an <see cref="IDrawExtension"/> to the <see cref="FrameBuffer"/>'s draw pipeline
-        /// </summary>
-        /// <param name="extension">The <see cref="IDrawExtension"/> to add</param>
         public void AddDrawExtension(IDrawExtension extension)
         {
             _drawExtensions.Add(extension);
         }
 
-        /// <summary>
-        /// Stops drawing the <see cref="FrameBuffer"/> and resets the console.
-        /// </summary>
         public void Dispose()
         {
             if ((_drawThread?.IsAlive).GetValueOrDefault())
                 _drawThread.Abort();
             Console.CursorVisible = true;
+        }
+        public static Dictionary<Color, FrameBufferPixel> RGBDosColors = new Dictionary<Color, FrameBufferPixel>();
+        public static Dictionary<ConsoleColor, Color> CCC = new Dictionary<ConsoleColor, Color>();
+        public static Color Blend(Color color, Color backColor, double amount)
+        {
+            byte r = (byte)((color.R * amount) + backColor.R * (1 - amount));
+            byte g = (byte)((color.G * amount) + backColor.G * (1 - amount));
+            byte b = (byte)((color.B * amount) + backColor.B * (1 - amount));
+            return Color.FromArgb(r, g, b);
+        }
+
+        private static double ColorDistance(Color a, Color b) => Math.Sqrt(Math.Pow(a.R - b.R, 2) + Math.Pow(a.G - b.G, 2) + Math.Pow(a.B - b.B, 2));
+        private static int NearestColorIndex(Color a, Color[] b)
+        {
+            int nearest = 0;
+            for (int i = 0; i < b.Length; i++)
+            {
+                if (ColorDistance(a, b[i]) < ColorDistance(a, b[nearest]))
+                    nearest = i;
+            }
+            return nearest;
+        }
+        static FrameBuffer()
+        {
+            CCC.Add(0, Color.FromArgb(0, 0, 0));
+            CCC.Add((ConsoleColor)1, Color.FromArgb(0, 0, 0xa8));
+            CCC.Add((ConsoleColor)2, Color.FromArgb(0, 0xa8, 0));
+            CCC.Add((ConsoleColor)3, Color.FromArgb(0, 0xa8, 0xa8));
+            CCC.Add((ConsoleColor)4, Color.FromArgb(0xa8, 0, 0));
+            CCC.Add((ConsoleColor)5, Color.FromArgb(0xa8, 0, 0xa8));
+            CCC.Add((ConsoleColor)6, Color.FromArgb(0xa8, 0xa8, 0));
+            CCC.Add((ConsoleColor)7, Color.FromArgb(0xa8, 0xa8, 0xa8));
+            CCC.Add((ConsoleColor)8, Color.FromArgb(0x54, 0x54, 0x54));
+            CCC.Add((ConsoleColor)9, Color.FromArgb(0x54, 0x54, 0xff));
+            CCC.Add((ConsoleColor)10, Color.FromArgb(0x54, 0xff, 0x54));
+            CCC.Add((ConsoleColor)11, Color.FromArgb(0x54, 0xff, 0xff));
+            CCC.Add((ConsoleColor)12, Color.FromArgb(0xff, 0x54, 0x54));
+            CCC.Add((ConsoleColor)13, Color.FromArgb(0xff, 0x54, 0xff));
+            CCC.Add((ConsoleColor)14, Color.FromArgb(0xff, 0xff, 0x54));
+            CCC.Add((ConsoleColor)15, Color.FromArgb(255, 255, 255));
+            for (int g = 0; 16 > g; g++)
+                for (int r = 0; 16 > r; r++)
+                    try { RGBDosColors.Add(Blend(CCC[(ConsoleColor)r], CCC[(ConsoleColor)g], 0.45), new FrameBufferPixel { ForegroundColour = (ConsoleColor)r, BackgroundColour = (ConsoleColor)g, Character = (char)0x2592 }); } catch { }
         }
     }
 }
