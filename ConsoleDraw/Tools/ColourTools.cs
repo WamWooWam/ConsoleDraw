@@ -8,28 +8,17 @@ namespace ConsoleDraw.Tools
 {
     public static class ColourTools
     {
-        public static Color[] RGBDosColors =
+        public static Dictionary<Color, FrameBufferPixel> RGBDosColors = new Dictionary<Color, FrameBufferPixel>();
+        public static Dictionary<ConsoleColor, Color> CCC = new Dictionary<ConsoleColor, Color>();
+        public static Color Blend(Color color, Color backColor, double amount)
         {
-            Color.FromArgb(0,0,0),
-            Color.FromArgb(0,0,0xa8),
-            Color.FromArgb(0,0xa8,0),
-            Color.FromArgb(0,0xa8,0xa8),
-            Color.FromArgb(0xa8,0,0),
-            Color.FromArgb(0xa8,0,0xa8),
-            Color.FromArgb(0xa8,0xa8,0),
-            Color.FromArgb(0xa8,0xa8,0xa8),
-            Color.FromArgb(0x54,0x54,0x54),
-            Color.FromArgb(0x54,0x54,0xff),
-            Color.FromArgb(0x54,0xff,0x54),
-            Color.FromArgb(0x54,0xff,0xff),
-            Color.FromArgb(0xff,0x54,0x54),
-            Color.FromArgb(0xff,0x54,0xff),
-            Color.FromArgb(0xff,0xff,0x54),
-            Color.FromArgb(255,255,255)
-        };
+            byte r = (byte)((color.R * amount) + backColor.R * (1 - amount));
+            byte g = (byte)((color.G * amount) + backColor.G * (1 - amount));
+            byte b = (byte)((color.B * amount) + backColor.B * (1 - amount));
+            return Color.FromArgb(r, g, b);
+        }
 
         public static double ColorDistance(Color a, Color b) => Math.Sqrt(Math.Pow(a.R - b.R, 2) + Math.Pow(a.G - b.G, 2) + Math.Pow(a.B - b.B, 2));
-
         public static int NearestColorIndex(Color a, Color[] b)
         {
             int nearest = 0;
@@ -39,16 +28,6 @@ namespace ConsoleDraw.Tools
                     nearest = i;
             }
             return nearest;
-        }
-
-        public static byte[] ImageTo4Bit(Bitmap bmp)
-        {
-            int j = 0;
-            byte[] buffer = new byte[bmp.Width * bmp.Height];
-            for (int y = 0; bmp.Height > y; y++)
-                for (int x = 0; bmp.Width > x; x++, j++)
-                    buffer[j] = (byte)NearestColorIndex(bmp.GetPixel(x, y), RGBDosColors);
-            return buffer;
         }
     }
 }

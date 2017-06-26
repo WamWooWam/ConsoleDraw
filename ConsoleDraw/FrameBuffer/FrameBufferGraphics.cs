@@ -73,12 +73,10 @@ namespace ConsoleDraw
         public void DrawImage(Image image, Point point)
         {
             _frameBuffer.RawFrameBuffer.CopyTo(_fbToModify, 0);
-
+            Bitmap bmp = (Bitmap)image;
             int intialPoint = (point.X) + (point.Y * _frameBuffer.Width);
             try
             {
-                Bitmap bmp = (Bitmap)image;
-                byte[] data = ColourTools.ImageTo4Bit(bmp);
                 for (int x = 0; bmp.Width > x; x++)
                 {
                     for (int y = 0; bmp.Height > y; y++)
@@ -86,17 +84,23 @@ namespace ConsoleDraw
                         int newPoint = x + (y * _frameBuffer.Width) + intialPoint;
                         try
                         {
-                            if (newPoint >= 0 && newPoint < _fbToModify.Length && x < bmp.Width && (y + (PseudoGraphics ? 1 : 0)) < bmp.Height)
-                                _fbToModify[newPoint] = new FrameBufferPixel()
-                                {
-                                    ForegroundColour = (ConsoleColor)ColourTools.NearestColorIndex(bmp.GetPixel(x, y + (PseudoGraphics ? 1 : 0)), ColourTools.RGBDosColors),
-                                    BackgroundColour = (ConsoleColor)ColourTools.NearestColorIndex(bmp.GetPixel(x, y), ColourTools.RGBDosColors),
-                                    Character = PseudoGraphics ? (char)0x2592 : ' '
-                                };
+                            if (newPoint >= 0 && newPoint < _fbToModify.Length && x < bmp.Width)
+                            {
+                                if (!PseudoGraphics)
+                                    _fbToModify[newPoint] = new FrameBufferPixel()
+                                    {
+                                        ForegroundColour = (ConsoleColor)ColourTools.NearestColorIndex(bmp.GetPixel(x, y), ColourTools.RGBDosColors.Keys.ToArray()),
+                                        BackgroundColour = (ConsoleColor)ColourTools.NearestColorIndex(bmp.GetPixel(x, y), ColourTools.RGBDosColors.Keys.ToArray()),
+                                        Character = PseudoGraphics ? (char)0x2592 : ' '
+                                    };
+                                else
+                                    _fbToModify[newPoint] = ColourTools.RGBDosColors[ColourTools.RGBDosColors.Keys.ToArray()[ColourTools.NearestColorIndex(bmp.GetPixel(x, y), ColourTools.RGBDosColors.Keys.ToArray())]];
+
+                            }
                         }
                         catch { }
                     }
-                }
+                }                
             }
             catch { throw new Exception("Exception! Make sure your image is valid."); }
 
