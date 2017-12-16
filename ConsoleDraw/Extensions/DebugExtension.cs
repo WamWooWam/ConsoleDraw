@@ -3,8 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using System.Drawing;
 using System.Diagnostics;
 
 namespace ConsoleDraw.Extensions
@@ -30,11 +28,6 @@ namespace ConsoleDraw.Extensions
 
             _graphics.DrawRect(new Rectangle(1, 1, _toDraw.Length, 1), ConsoleColor.White);
             _graphics.DrawString(_toDraw, new Point(1, 1), ConsoleColor.Black);
-
-            _toDraw = $"Allocated RAM: {_process.WorkingSet64 / 1024L}KB";            
-
-            _graphics.DrawRect(new Rectangle(1, 2, _toDraw.Length, 1), ConsoleColor.White);
-            _graphics.DrawString(_toDraw, new Point(1, 2), ConsoleColor.Black);
         }
     }
 }

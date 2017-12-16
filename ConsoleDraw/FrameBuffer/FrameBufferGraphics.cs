@@ -1,17 +1,15 @@
 ﻿using ConsoleDraw.Tools;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace ConsoleDraw
 {
     public class FrameBufferGraphics
     {
         private FrameBuffer _frameBuffer;
-        private FrameBufferPixel[] _fbToModify;
+        private FrameBufferPixel[,] _fbToModify;
 
         /// <summary>
         /// Enables or disables colour approximations
@@ -22,10 +20,10 @@ namespace ConsoleDraw
         /// Initialises a <see cref="FrameBufferGraphics"/> object based on a <see cref="FrameBuffer"/>
         /// </summary>
         /// <param name="frameBuffer">The <see cref="FrameBuffer"/>.</param>
-        public void Init(FrameBuffer frameBuffer)
+        public FrameBufferGraphics(FrameBuffer frameBuffer)
         {
             _frameBuffer = frameBuffer;
-            _fbToModify = new FrameBufferPixel[_frameBuffer.Width * _frameBuffer.Height];
+            _fbToModify = new FrameBufferPixel[_frameBuffer.Width, _frameBuffer.Height];
         }
 
         /// <summary>
@@ -46,66 +44,61 @@ namespace ConsoleDraw
         /// <param name="character">The character to draw with</param>
         public void DrawRect(Rectangle rect, ConsoleColor bgColour, ConsoleColor fgColour = ConsoleColor.Gray, char character = ' ')
         {
-            _frameBuffer.RawFrameBuffer.CopyTo(_fbToModify, 0);
+            _frameBuffer.GetFramebufferCopy(_fbToModify);
 
-            int intialPoint = (rect.X) + (rect.Y * _frameBuffer.Width);
-            for (int i = 0; i < rect.Height; i++)
-            {
-                for (int j = 0; j < rect.Width; j++)
+            //if (rect.X + rect.Width < _frameBuffer.Width && rect.Y + rect.Height < _frameBuffer.Height)
+            //{
+                for (int x = 0; x < rect.Width; x++)
                 {
-                    int newPoint = j + (i * _frameBuffer.Width) + intialPoint;
-                    if (newPoint > 0 && newPoint < _fbToModify.Length)
+                    for (int y = 0; y < rect.Height; y++)
                     {
-                        FrameBufferPixel pixel = new FrameBufferPixel() { BackgroundColour = bgColour, ForegroundColour = fgColour, Character = character };
-                        _fbToModify[newPoint] = pixel;
+                        _fbToModify[(x + rect.X).Clamp(0, _frameBuffer.Width), (y + rect.Y).Clamp(0, _frameBuffer.Height)] = new FrameBufferPixel() { BackgroundColour = bgColour, ForegroundColour = fgColour, Character = character };
                     }
                 }
-            }
+            //}
+
 
             _frameBuffer.RawFrameBuffer = _fbToModify;
         }
 
         /// <summary>
+        /// Draws an external framebuffer to this one.
+        /// </summary>
+        /// <param name="buffer"></param>
+        /// <param name="point"></param>
+        public void DrawBuffer(FrameBuffer buffer, Point point)
+        {
+            if (!buffer.Running)
+            {
+                _frameBuffer.GetFramebufferCopy(_fbToModify);
+
+            }
+            else
+                throw new InvalidOperationException("Buffer cannot be running.");
+        }
+
+#if NET35 || NET40 || NET452
+        /// <summary>
         /// Draws an image to the current <see cref="FrameBuffer"/>. Thanks nikitpad!
         /// </summary>
         /// <param name="image">The image to draw</param>
         /// <param name="point">The point to draw the image at</param>
-        public void DrawImage(Image image, Point point)
+        public void DrawImage(System.Drawing.Image image, Point point)
         {
-            _frameBuffer.RawFrameBuffer.CopyTo(_fbToModify, 0);
-            Bitmap bmp = (Bitmap)image;
-            int intialPoint = (point.X) + (point.Y * _frameBuffer.Width);
-            try
-            {
-                for (int x = 0; bmp.Width > x; x++)
-                {
-                    for (int y = 0; bmp.Height > y; y++)
-                    {
-                        int newPoint = x + (y * _frameBuffer.Width) + intialPoint;
-                        try
-                        {
-                            if (newPoint >= 0 && newPoint < _fbToModify.Length && x < bmp.Width)
-                            {
-                                if (!PseudoGraphics)
-                                    _fbToModify[newPoint] = new FrameBufferPixel()
-                                    {
-                                        ForegroundColour = (ConsoleColor)ColourTools.NearestColorIndex(bmp.GetPixel(x, y), ColourTools.RGBDosColors.Keys.ToArray()),
-                                        BackgroundColour = (ConsoleColor)ColourTools.NearestColorIndex(bmp.GetPixel(x, y), ColourTools.RGBDosColors.Keys.ToArray()),
-                                        Character = PseudoGraphics ? (char)0x2592 : ' '
-                                    };
-                                else
-                                    _fbToModify[newPoint] = ColourTools.RGBDosColors[ColourTools.RGBDosColors.Keys.ToArray()[ColourTools.NearestColorIndex(bmp.GetPixel(x, y), ColourTools.RGBDosColors.Keys.ToArray())]];
+            _frameBuffer.GetFramebufferCopy(_fbToModify);
 
-                            }
-                        }
-                        catch { }
-                    }
-                }                
+            System.Drawing.Bitmap bmp = (System.Drawing.Bitmap)image;
+
+            if (point.X <= _frameBuffer.Width && point.Y <= _frameBuffer.Height && point.X + bmp.Width <= _frameBuffer.Width && point.Y + bmp.Height <= _frameBuffer.Height)
+            {
+                FrameBuffer.InternalBitmapToFramebuffer(bmp, point, _fbToModify, PseudoGraphics);
             }
-            catch { throw new Exception("Exception! Make sure your image is valid."); }
+            else
+                throw new InvalidOperationException("Image is too large for buffer");
 
             _frameBuffer.RawFrameBuffer = _fbToModify;
         }
+#endif
 
         /// <summary>
         /// Draws the outile of an ellipse. Thanks to 0x3F!
@@ -118,7 +111,7 @@ namespace ConsoleDraw
         /// <param name="character">The character to draw with</param>
         public void DrawEllipse(Point center, int xRadius, int yRadius, ConsoleColor bgColour, ConsoleColor fgColour = ConsoleColor.Gray, char character = ' ')
         {
-            _frameBuffer.RawFrameBuffer.CopyTo(_fbToModify, 0);
+            _frameBuffer.GetFramebufferCopy(_fbToModify);
 
             double angle = 0.0;
             double anglestepsize = 0.008;
@@ -130,12 +123,7 @@ namespace ConsoleDraw
 
                 angle += anglestepsize;
 
-                int newPoint = x1 + (y1 * _frameBuffer.Width);
-                if (newPoint >= 0 && newPoint < _fbToModify.Length)
-                {
-                    FrameBufferPixel pixel = new FrameBufferPixel() { BackgroundColour = bgColour, ForegroundColour = fgColour, Character = character };
-                    _fbToModify[newPoint] = pixel;
-                }
+                _fbToModify[x1, y1] = new FrameBufferPixel() { BackgroundColour = bgColour, ForegroundColour = fgColour, Character = character };
             }
 
             _frameBuffer.RawFrameBuffer = _fbToModify;
@@ -270,12 +258,10 @@ namespace ConsoleDraw
         /// <param name="fgColour">The colour to draw with</param>
         public void DrawString(string text, Point point, ConsoleColor fgColour = ConsoleColor.Gray)
         {
-            int intialPoint = (point.X) + (point.Y * _frameBuffer.Width);
             for (int j = 0; j < text.Length; j++)
             {
-                int newPoint = j + intialPoint;
-                FrameBufferPixel currentPoint = _frameBuffer.RawFrameBuffer[newPoint];
-                _frameBuffer.RawFrameBuffer[newPoint] = new FrameBufferPixel() { BackgroundColour = currentPoint.BackgroundColour, ForegroundColour = fgColour, Character = text[j] };
+                FrameBufferPixel currentPoint = _frameBuffer.RawFrameBuffer[point.X + j, point.Y];
+                _frameBuffer.RawFrameBuffer[point.X + j, point.Y] = new FrameBufferPixel() { BackgroundColour = currentPoint.BackgroundColour, ForegroundColour = fgColour, Character = text[j] };
             }
         }
     }
