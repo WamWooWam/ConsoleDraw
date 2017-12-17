@@ -1,6 +1,6 @@
 ﻿namespace ConsoleDraw
 {
-    public struct Rectangle
+    public class Rectangle
     {
         private int x;
         private int y;
@@ -11,6 +11,8 @@
         public int Y => y;
         public int Width => width;
         public int Height => height;
+
+        internal Rectangle() { }
 
         public Rectangle(int x, int y, int width, int height)
         {

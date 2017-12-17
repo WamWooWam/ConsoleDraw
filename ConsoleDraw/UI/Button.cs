@@ -5,17 +5,40 @@ using System.Text;
 
 namespace ConsoleDraw.UI
 {
-    class Button : Control
+    public class Button : Control
     {
+        public Button()
+        {
+            BorderColor = ConsoleColor.DarkGray;
+            BackgroundColour = ConsoleColor.Gray;
+            ForegroundColour = ConsoleColor.Black;
+
+            BorderThickness = new Thickness(1);
+            Padding = new Thickness(1);
+        }
+
         public string Text { get; set; }
 
         public override void Draw(FrameBufferGraphics graph)
         {
-            graph.DrawRect(_rect, ConsoleColor.DarkGray);
-            graph.DrawRect(new Rectangle(_rect.X + 1, _rect.Y + 1, _rect.Width - 2, _rect.Height - 2), BackgroundColour);
-            int offsetX = (_rect.Width - Text.Length) / 2;
-            int offsetY = (_rect.Height) / 2;
-            graph.DrawString(Text, new Point(_rect.X + offsetX, _rect.Y + offsetY), ForegroundColour);
+            // look right
+            // i never said what i write is readable
+
+            int drawWidth = Width != -1 ? Width : Text.Length + BorderThickness.LeftRight + Padding.LeftRight;
+            int drawHeight = Height != -1 ? Height : 1 + BorderThickness.TopBottom + Padding.TopBottom;
+
+            graph.DrawRect(
+                new Rectangle(X , Y, drawWidth, drawHeight),
+                _active? BackgroundColour: BorderColor);
+
+            graph.DrawRect(
+                new Rectangle(X + BorderThickness.Left, Y + BorderThickness.Top, drawWidth - BorderThickness.LeftRight, drawHeight - BorderThickness.TopBottom),
+                _active ? BorderColor : BackgroundColour);
+
+            int offsetX = (drawWidth - Text.Length) / 2;
+            int offsetY = (drawHeight) / 2;
+
+            graph.DrawString(Text, new Point(X + offsetX, Y + offsetY), ForegroundColour);
         }
     }
 }

@@ -153,7 +153,7 @@ namespace ConsoleDraw
             if (UseFrameLimiter)
             {
                 if (_frameLimitMS - _watch.ElapsedMilliseconds > 0)
-                    Thread.Sleep(_frameLimitMS - (int)_watch.ElapsedMilliseconds);
+                    Thread.Sleep(Math.Max(0, _frameLimitMS - (int)_watch.ElapsedMilliseconds));
             }
 
 
@@ -201,7 +201,7 @@ namespace ConsoleDraw
         /// <param name="point">Point to xopy to (x,y)</param>
         /// <param name="frameBuffer">The raw frame buffer to copy to</param>
         /// <param name="pseudoGraphics">Enable or disable pseudo graphics</param>
-        internal static void InternalBitmapToFramebuffer(System.Drawing.Bitmap bmp, Point point, FrameBufferPixel[,] frameBuffer, bool pseudoGraphics = true)
+        internal static void InternalBitmapToFramebuffer(Bitmap bmp, Point point, FrameBufferPixel[,] frameBuffer, bool pseudoGraphics = true)
         {
             for (int x = 0; bmp.Width > x; x++)
             {

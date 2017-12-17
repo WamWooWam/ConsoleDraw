@@ -16,6 +16,8 @@ namespace ConsoleDraw
         /// </summary>
         public bool PseudoGraphics { get; set; }
 
+        public FrameBuffer FrameBuffer => _frameBuffer;
+
         /// <summary>
         /// Initialises a <see cref="FrameBufferGraphics"/> object based on a <see cref="FrameBuffer"/>
         /// </summary>
@@ -48,13 +50,13 @@ namespace ConsoleDraw
 
             //if (rect.X + rect.Width < _frameBuffer.Width && rect.Y + rect.Height < _frameBuffer.Height)
             //{
-                for (int x = 0; x < rect.Width; x++)
+            for (int x = 0; x < rect.Width; x++)
+            {
+                for (int y = 0; y < rect.Height; y++)
                 {
-                    for (int y = 0; y < rect.Height; y++)
-                    {
-                        _fbToModify[(x + rect.X).Clamp(0, _frameBuffer.Width), (y + rect.Y).Clamp(0, _frameBuffer.Height)] = new FrameBufferPixel() { BackgroundColour = bgColour, ForegroundColour = fgColour, Character = character };
-                    }
+                    _fbToModify[(x + rect.X).Clamp(0, _frameBuffer.Width - 1), (y + rect.Y).Clamp(0, _frameBuffer.Height - 1)] = new FrameBufferPixel() { BackgroundColour = bgColour, ForegroundColour = fgColour, Character = character };
                 }
+            }
             //}
 
 
@@ -71,7 +73,14 @@ namespace ConsoleDraw
             if (!buffer.Running)
             {
                 _frameBuffer.GetFramebufferCopy(_fbToModify);
-
+                for (int x = 0; x < buffer.Width; x++)
+                {
+                    for (int y = 0; y < buffer.Height; y++)
+                    {
+                        _fbToModify[(x + point.X).Clamp(0, _frameBuffer.Width - 1), (y + point.Y).Clamp(0, _frameBuffer.Height - 1)] = buffer.RawFrameBuffer[x, y];
+                    }
+                }
+                _frameBuffer.RawFrameBuffer = _fbToModify;
             }
             else
                 throw new InvalidOperationException("Buffer cannot be running.");
