@@ -3,18 +3,21 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
+
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace ConsoleDraw
 {
     public class FrameBufferGraphics
     {
         private FrameBuffer _frameBuffer;
-        private FrameBufferPixel[,] _fbToModify;
 
         /// <summary>
         /// Enables or disables colour approximations
         /// </summary>
-        public bool PseudoGraphics { get; set; }
+        public bool PseudoGraphics { get; set; } = true;
 
         public FrameBuffer FrameBuffer => _frameBuffer;
 
@@ -25,7 +28,6 @@ namespace ConsoleDraw
         public FrameBufferGraphics(FrameBuffer frameBuffer)
         {
             _frameBuffer = frameBuffer;
-            _fbToModify = new FrameBufferPixel[_frameBuffer.Width, _frameBuffer.Height];
         }
 
         /// <summary>
@@ -46,22 +48,18 @@ namespace ConsoleDraw
         /// <param name="character">The character to draw with</param>
         public void DrawRect(Rectangle rect, ConsoleColor bgColour, ConsoleColor fgColour = ConsoleColor.Gray, char character = ' ')
         {
-            _frameBuffer.GetFramebufferCopy(_fbToModify);
-
             //if (rect.X + rect.Width < _frameBuffer.Width && rect.Y + rect.Height < _frameBuffer.Height)
             //{
-            for (int x = 0; x < rect.Width; x++)
+            Parallel.For(0, rect.Width, x =>
             {
                 for (int y = 0; y < rect.Height; y++)
                 {
-                    _fbToModify[(x + rect.X).Clamp(0, _frameBuffer.Width - 1), (y + rect.Y).Clamp(0, _frameBuffer.Height - 1)] = new FrameBufferPixel() { BackgroundColour = bgColour, ForegroundColour = fgColour, Character = character };
+                    _frameBuffer.RawFrameBuffer[(x + rect.X).Clamp(0, _frameBuffer.Width - 1), (y + rect.Y).Clamp(0, _frameBuffer.Height - 1)] = new FrameBufferPixel() { BackgroundColour = bgColour, ForegroundColour = fgColour, Character = character };
                 }
-            }
+            });
             //}
-
-
-            _frameBuffer.RawFrameBuffer = _fbToModify;
         }
+
 
         /// <summary>
         /// Draws an external framebuffer to this one.
@@ -72,21 +70,19 @@ namespace ConsoleDraw
         {
             if (!buffer.Running)
             {
-                _frameBuffer.GetFramebufferCopy(_fbToModify);
-                for (int x = 0; x < buffer.Width; x++)
+                Parallel.For(0, buffer.Width, x =>
                 {
                     for (int y = 0; y < buffer.Height; y++)
                     {
-                        _fbToModify[(x + point.X).Clamp(0, _frameBuffer.Width - 1), (y + point.Y).Clamp(0, _frameBuffer.Height - 1)] = buffer.RawFrameBuffer[x, y];
+                        _frameBuffer.RawFrameBuffer[(x + point.X).Clamp(0, _frameBuffer.Width - 1), (y + point.Y).Clamp(0, _frameBuffer.Height - 1)] = buffer.RawFrameBuffer[x, y];
                     }
-                }
-                _frameBuffer.RawFrameBuffer = _fbToModify;
+                });
             }
             else
                 throw new InvalidOperationException("Buffer cannot be running.");
         }
 
-#if NET35 || NET40 || NET452
+#if NET35 || NET40 || NET452 || NET461
         /// <summary>
         /// Draws an image to the current <see cref="FrameBuffer"/>. Thanks nikitpad!
         /// </summary>
@@ -94,20 +90,41 @@ namespace ConsoleDraw
         /// <param name="point">The point to draw the image at</param>
         public void DrawImage(System.Drawing.Image image, Point point)
         {
-            _frameBuffer.GetFramebufferCopy(_fbToModify);
-
             System.Drawing.Bitmap bmp = (System.Drawing.Bitmap)image;
 
             if (point.X <= _frameBuffer.Width && point.Y <= _frameBuffer.Height && point.X + bmp.Width <= _frameBuffer.Width && point.Y + bmp.Height <= _frameBuffer.Height)
             {
-                FrameBuffer.InternalBitmapToFramebuffer(bmp, point, _fbToModify, PseudoGraphics);
+                FrameBuffer.InternalBitmapToFramebuffer(bmp, point, _frameBuffer.RawFrameBuffer, PseudoGraphics);
             }
             else
                 throw new InvalidOperationException("Image is too large for buffer");
-
-            _frameBuffer.RawFrameBuffer = _fbToModify;
         }
 #endif
+        
+        internal void DrawImage<TPixel>(TPixel[] pixel, Point point, int width, int height) where TPixel : struct, IPixel<TPixel>
+        {
+            FrameBuffer.InternalPixelToFramebuffer(pixel, point, _frameBuffer.RawFrameBuffer, width, height, PseudoGraphics);
+        }
+
+        public void DrawImage<TPixel>(Image<TPixel> bmp, Point point) where TPixel : struct, IPixel<TPixel>
+        {
+            if (point.X <= _frameBuffer.Width && point.Y <= _frameBuffer.Height && point.X + bmp.Width <= _frameBuffer.Width && point.Y + bmp.Height <= _frameBuffer.Height)
+            {
+                FrameBuffer.InternalImageToFramebuffer(bmp, point, _frameBuffer.RawFrameBuffer, PseudoGraphics);
+            }
+            else
+                throw new InvalidOperationException("Image is too large for buffer");
+        }
+
+        public void DrawImage<TPixel>(ImageFrame<TPixel> bmp, Point point) where TPixel : struct, IPixel<TPixel>
+        {
+            if (point.X <= _frameBuffer.Width && point.Y <= _frameBuffer.Height && point.X + bmp.Width <= _frameBuffer.Width && point.Y + bmp.Height <= _frameBuffer.Height)
+            {
+                FrameBuffer.InternalImageFrameToFramebuffer(bmp, point, _frameBuffer.RawFrameBuffer, PseudoGraphics);
+            }
+            else
+                throw new InvalidOperationException("Image is too large for buffer");
+        }
 
         /// <summary>
         /// Draws the outile of an ellipse. Thanks to 0x3F!
@@ -120,8 +137,6 @@ namespace ConsoleDraw
         /// <param name="character">The character to draw with</param>
         public void DrawEllipse(Point center, int xRadius, int yRadius, ConsoleColor bgColour, ConsoleColor fgColour = ConsoleColor.Gray, char character = ' ')
         {
-            _frameBuffer.GetFramebufferCopy(_fbToModify);
-
             double angle = 0.0;
             double anglestepsize = 0.008;
 
@@ -132,10 +147,8 @@ namespace ConsoleDraw
 
                 angle += anglestepsize;
 
-                _fbToModify[x1, y1] = new FrameBufferPixel() { BackgroundColour = bgColour, ForegroundColour = fgColour, Character = character };
+                _frameBuffer.RawFrameBuffer[x1, y1] = new FrameBufferPixel() { BackgroundColour = bgColour, ForegroundColour = fgColour, Character = character };
             }
-
-            _frameBuffer.RawFrameBuffer = _fbToModify;
         }
 
         /// <summary>
@@ -267,11 +280,11 @@ namespace ConsoleDraw
         /// <param name="fgColour">The colour to draw with</param>
         public void DrawString(string text, Point point, ConsoleColor fgColour = ConsoleColor.Gray)
         {
-            for (int j = 0; j < text.Length; j++)
+            for (int i = 0; i < text.Length; i++)
             {
-                FrameBufferPixel currentPoint = _frameBuffer.RawFrameBuffer[point.X + j, point.Y];
-                _frameBuffer.RawFrameBuffer[point.X + j, point.Y] = new FrameBufferPixel() { BackgroundColour = currentPoint.BackgroundColour, ForegroundColour = fgColour, Character = text[j] };
-            }
+                FrameBufferPixel currentPoint = _frameBuffer.RawFrameBuffer[point.X + i, point.Y];
+                _frameBuffer.RawFrameBuffer[point.X + i, point.Y] = new FrameBufferPixel() { BackgroundColour = currentPoint.BackgroundColour, ForegroundColour = fgColour, Character = text[i] };
+            };
         }
     }
 }

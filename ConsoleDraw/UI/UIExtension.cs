@@ -25,13 +25,18 @@ namespace ConsoleDraw.UI
 
         public Panel BasePanel { get; private set; }
 
-        private IEnumerable<Control> _selectableControls => BasePanel.Controls.Where(c => c.IsSelectable);
+        private IEnumerable<Control> _selectableControls => BasePanel.Controls.Where(c => c.Selectable);
 
         private int _selectedControlIndex = 0;
 
+        public void ForceRedraw()
+        {
+            BasePanel.NeedsUpdate = true;
+        }
+
         public override void RunExtension()
         {
-            BasePanel.Draw(_graphics);
+            BasePanel.ExtensionDraw(_graphics);
         }
 
         public void BeginEventLoop()
@@ -58,6 +63,9 @@ namespace ConsoleDraw.UI
                         break;
                     case ConsoleKey.Enter:
                         _selectableControls.ElementAtOrDefault(_selectedControlIndex)?.Activate();
+                        break;
+                    default:
+                        _selectableControls.ElementAtOrDefault(_selectedControlIndex)?.KeyPress(keyInfo);
                         break;
                 }
 

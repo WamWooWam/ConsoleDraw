@@ -16,12 +16,29 @@ namespace ConsoleDraw.UI
 
         public override bool IsSelectable => false;
 
-        public override void Draw(FrameBufferGraphics graph)
+        internal void ExtensionDraw(FrameBufferGraphics graphics) => Draw(graphics);
+
+        protected override void Draw(FrameBufferGraphics graph)
         {
-            graph.Clear(BackgroundColour);
-            foreach (Control control in Controls)
+            if (Controls.Any(c => c.NeedsUpdate))
             {
-                control.Draw(graph);
+                if (NeedsUpdate)
+                {
+                    graph.Clear(BackgroundColour);
+                    foreach (Control control in Controls)
+                    {
+                        control.InternalDraw(graph);
+                    }
+                }
+                else
+                {
+                    foreach (Control control in Controls.Where(c => c.NeedsUpdate))
+                    {
+                        control.InternalDraw(graph);
+                    }
+                }
+
+                _needsUpdate = false;
             }
         }
     }

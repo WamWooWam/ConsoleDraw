@@ -1,8 +1,12 @@
 ﻿using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using ConsoleDraw;
+using ConsoleDraw.Extensions;
 using ConsoleDraw.UI;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace ConsoleDraw.Example
 {
@@ -12,35 +16,29 @@ namespace ConsoleDraw.Example
 
         static void Main(string[] args)
         {
-            FrameBuffer buffer = new FrameBuffer(Console.WindowWidth, Console.WindowHeight);
+            FrameBuffer buffer = new FrameBuffer(Console.WindowWidth, Console.WindowHeight)
+            {
+                FrameLimit = 60
+            };
+
             FrameBufferGraphics graphics = new FrameBufferGraphics(buffer);
             _ui = new UIExtension(buffer, graphics);
             buffer.AddDrawExtension(_ui);
+            buffer.AddDrawExtension(new DebugExtension(buffer, graphics));
 
-            TextArea area = new TextArea
+            ImageBox imageBox = new ImageBox()
             {
-                Text = "This is a really long piece of text that should flow and wrap onto multiple lines\nIt also includes linebreaks of its own n shit.",
-                X = 1,
-                Y = 1,
-                Width = Console.WindowWidth / 2,
-                Height = Console.WindowHeight,
-                BackgroundColour = ConsoleColor.Blue,
-                ForegroundColour = ConsoleColor.White
+                Width = 32,
+                Height = 32,
+                X = 3,
+                Y = 3,
+                Image = Image.Load<Rgb24>(@"C:\Users\wamwo\Downloads\394504330683744257.gif")
             };
 
-            _ui.BasePanel.Controls.Add(area);
+            _ui.BasePanel.Controls.Add(imageBox);
 
             buffer.Run();
-
-            int i = 0;
-            while (true)
-            {
-                Thread.Sleep(100);
-                area.Text += $"Thing {i}!\n";
-                i++;
-            }
-
-            //_ui.BeginEventLoop();
+           // _ui.BeginEventLoop();
         }
 
         private static void Button_Activated(object sender, EventArgs e)

@@ -22,11 +22,8 @@
             this.height = height;
         }
 
-
-#if NET35 || NET40 || NET452 || NETSTANDARD2_0
+        
         public static implicit operator System.Drawing.Rectangle(Rectangle c) => new System.Drawing.Rectangle(c.x, c.y, c.width, c.height);
-
         public static implicit operator Rectangle(System.Drawing.Rectangle c) => new Rectangle(c.X, c.Y, c.Width, c.Height);
-#endif
     }
 }

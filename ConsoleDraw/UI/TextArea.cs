@@ -8,10 +8,13 @@ namespace ConsoleDraw.UI
 {
     public class TextArea : Control
     {
+        public TextArea()
+        {
+            BorderThickness = new Thickness(1);
+            Text = "";
+        }
+
         private string _text;
-        private bool _needsUpdate = true;
-        private FrameBuffer _frameBuffer; // speeeeed
-        private FrameBufferGraphics _graphics;
 
         public string Text
         {
@@ -24,52 +27,63 @@ namespace ConsoleDraw.UI
             }
         }
 
-        public override void Draw(FrameBufferGraphics graph)
+        public bool ReadOnly { get; set; }
+
+        public bool AcceptsReturn { get; set; }
+
+        public override void Activate()
         {
-            if (_needsUpdate || _frameBuffer == null || _frameBuffer.Width != Width || _frameBuffer.Height != Height)
-            {
-                if(_frameBuffer == null || _frameBuffer.Width != Width || _frameBuffer.Height != Height)
-                {
-                    _frameBuffer = new FrameBuffer(Width, Height);
-                    _graphics = new FrameBufferGraphics(_frameBuffer);
-                }
-
-                int drawWidth = Width - BorderThickness.LeftRight;
-                int drawHeight = Height - BorderThickness.TopBottom;
-
-                _graphics.Clear(BorderColor);
-                _graphics.DrawRect(new Rectangle(BorderThickness.Left, BorderThickness.Top, drawWidth, drawHeight), BackgroundColour);
-                List<string> lines = new List<string>();
-
-                foreach (string line in Text.Split('\n'))
-                {
-                    if (line.Length > drawWidth)
-                    {
-                        string cur = line;
-                        while (cur.Length > drawWidth)
-                        {
-                            lines.Add(cur.Substring(0, drawWidth));
-                            cur = cur.Substring(drawWidth);
-                        }
-                        lines.Add(cur);
-                    }
-                    else
-                        lines.Add(line);
-                }
-
-                IEnumerable<string> preparedLines = lines.Skip(Math.Max(0, lines.Count - drawHeight));
-                for (int i = 0; i < preparedLines.Count(); i++)
-                {
-                    _graphics.DrawString(preparedLines.ElementAt(i), new Point(BorderThickness.Left, i + BorderThickness.Top), ForegroundColour);
-                }
-
-                _needsUpdate = false;
-                graph.DrawBuffer(_frameBuffer, new Point(X, Y));
-            }
+            if (!ReadOnly && AcceptsReturn)
+                Text += "\n";
             else
+                base.Activate();
+        }
+
+        public override void KeyPress(ConsoleKeyInfo k)
+        {
+            base.KeyPress(k);
+            if (!ReadOnly)
             {
-                graph.DrawBuffer(_frameBuffer, new Point(X, Y));
+                if (k.Key == ConsoleKey.Backspace)
+                {
+                    if (Text.Length > 1)
+                        Text = Text.Substring(0, Text.Length - 1);
+                    else
+                        Text = "";
+                }
+                else
+                {
+                    Text += k.KeyChar;
+                }
             }
+        }
+
+        protected override void Draw(FrameBufferGraphics graph)
+        {
+            List<string> lines = new List<string>();
+
+            foreach (string line in Text.Trim().Replace("\r\n", "\n").Split('\n').Select(t => t.Trim()))
+            {
+                if (line.Length > DrawWidth)
+                {
+                    string cur = line;
+                    while (cur.Length > DrawWidth)
+                    {
+                        lines.Add(cur.Substring(0, DrawWidth));
+                        cur = cur.Substring(DrawWidth);
+                    }
+                    lines.Add(cur);
+                }
+                else
+                    lines.Add(line);
+            }
+
+            IEnumerable<string> preparedLines = lines.Skip(Math.Max(0, lines.Count - DrawHeight)).Select(t => t.Trim());
+            for (int i = 0; i < preparedLines.Count(); i++)
+            {
+                graph.DrawString(preparedLines.ElementAt(i), new Point(BorderThickness.Left, i + BorderThickness.Top), ForegroundColour);
+            }
+
         }
 
         public void WriteLine(string text)
