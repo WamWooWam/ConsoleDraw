@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ConsoleDraw.UI.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -31,13 +32,14 @@ namespace ConsoleDraw.UI
         private Thickness _borderThickness;
         private Thickness _padding;
         private bool _enabled;
+        private DockStyle _dock;
 
         public event EventHandler Activated;
         public event EventHandler Selected;
         public event EventHandler Deselected;
         public event EventHandler<ConsoleKeyPressEventArgs> KeyPressed;
 
-        internal bool NeedsUpdate { get => _needsUpdate || UpdateAlways; set => _needsUpdate = value; }
+        internal virtual bool NeedsUpdate { get => _needsUpdate || UpdateAlways; set => _needsUpdate = value; }
 
         public virtual void Activate()
         {
@@ -150,6 +152,16 @@ namespace ConsoleDraw.UI
             }
         }
 
+        public DockStyle Dock
+        {
+            get => _dock;
+            set
+            {
+                _dock = value;
+                _needsUpdate = true;
+            }
+        }
+
         public Thickness BorderThickness
         {
             get => _borderThickness;
@@ -180,6 +192,8 @@ namespace ConsoleDraw.UI
             }
         }
 
+        public Panel Parent { get; internal set; }
+
         protected virtual bool UpdateAlways => false;
 
         #region Helpers
@@ -201,9 +215,11 @@ namespace ConsoleDraw.UI
 
         #endregion
 
+        internal void InternalLayout(FrameBuffer buffer, ref LayoutInfo info) => Layout(buffer, ref info);
+
         internal void InternalDraw(FrameBufferGraphics graph)
         {
-            if (NeedsUpdate || _frameBuffer == null || _frameBuffer.Width != Width || _frameBuffer.Height != Height)
+            if (NeedsUpdate || _frameBuffer == null)
             {
                 if (_frameBuffer == null || _frameBuffer.Width != Width || _frameBuffer.Height != Height)
                 {
@@ -211,9 +227,12 @@ namespace ConsoleDraw.UI
                     _graphics = new FrameBufferGraphics(_frameBuffer);
                 }
 
-                _graphics.Clear(_active && InvertOnSelect ? BackgroundColour : BorderColor);
-                _graphics.DrawRect(new Rectangle(BorderThickness.Left, BorderThickness.Right, DrawWidth, DrawHeight),
-                    _active && InvertOnSelect ? BorderColor : BackgroundColour);
+                if (!UpdateAlways)
+                {
+                    _graphics.Clear(_active && InvertOnSelect ? BackgroundColour : BorderColor);
+                    _graphics.DrawRect(new Rectangle(BorderThickness.Left, BorderThickness.Right, DrawWidth, DrawHeight),
+                        _active && InvertOnSelect ? BorderColor : BackgroundColour);
+                }
 
                 Draw(_graphics);
             }
@@ -221,6 +240,46 @@ namespace ConsoleDraw.UI
             graph.DrawBuffer(_frameBuffer, new Point(X, Y));
 
             _needsUpdate = false;
+        }
+
+        protected virtual void Layout(FrameBuffer buffer, ref LayoutInfo info)
+        {
+            switch (Dock)
+            {
+                case DockStyle.Top:
+                    Width = info.Width;
+                    Y = info.CurrentY;
+                    info.CurrentY += Height;
+
+                    info.AvailableHeight -= Height;
+                    break;
+                case DockStyle.Bottom:
+                    Width = info.Width;
+                    Y = (buffer.Height - Height);
+                    X = 0;
+                    info.AvailableHeight -= Height;
+                    break;
+                case DockStyle.Left:
+                    X = 0;
+                    Y = info.CurrentY;
+                    if (Width == 0)
+                        Width = info.Width / 2;
+                    Height = info.AvailableHeight;
+                    break;
+                case DockStyle.Right:
+                    X = info.AvailableWidth / 2;
+                    Y = info.CurrentY;
+                    if (Width == 0)
+                        Width = info.Width / 2;
+                    Height = info.AvailableHeight;
+                    break;
+                case DockStyle.Fill:
+                    break;
+
+                case DockStyle.None:
+                default:
+                    break;
+            }
         }
 
         protected abstract void Draw(FrameBufferGraphics graph);

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 using ConsoleDraw;
 using ConsoleDraw.Extensions;
 using ConsoleDraw.UI;
@@ -12,8 +13,6 @@ namespace ConsoleDraw.Example
 {
     class Program
     {
-        static UIExtension _ui;
-
         static void Main(string[] args)
         {
             FrameBuffer buffer = new FrameBuffer(Console.WindowWidth, Console.WindowHeight)
@@ -22,28 +21,41 @@ namespace ConsoleDraw.Example
             };
 
             FrameBufferGraphics graphics = new FrameBufferGraphics(buffer);
-            _ui = new UIExtension(buffer, graphics);
-            buffer.AddDrawExtension(_ui);
-            buffer.AddDrawExtension(new DebugExtension(buffer, graphics));
+            buffer.Run();
 
+            UIExtension ext = new UIExtension(buffer);
             ImageBox imageBox = new ImageBox()
             {
+                Image = Image.Load<Rgb24>(@"C:\Users\wamwo\Downloads\congaparrot.gif"),
+                Width = 32,
+                Height = 32
+            };
+            ext.Controls.Add(imageBox);
+            ImageBox imageBox2 = new ImageBox()
+            {
+                Image = Image.Load<Rgb24>(@"C:\Users\wamwo\Downloads\congaparrot.gif"),
                 Width = 32,
                 Height = 32,
-                X = 3,
-                Y = 3,
-                Image = Image.Load<Rgb24>(@"C:\Users\wamwo\Downloads\394504330683744257.gif")
+                X = 32
             };
-
-            _ui.BasePanel.Controls.Add(imageBox);
-
-            buffer.Run();
-           // _ui.BeginEventLoop();
-        }
-
-        private static void Button_Activated(object sender, EventArgs e)
-        {
-            (sender as Button).Text = "You clicked me!";
+            ext.Controls.Add(imageBox2);
+            ImageBox imageBox3 = new ImageBox()
+            {
+                Image = Image.Load<Rgb24>(@"C:\Users\wamwo\Downloads\congaparrot.gif"),
+                Width = 32,
+                Height = 32,
+                X = 64
+            };
+            ext.Controls.Add(imageBox3);
+            ImageBox imageBox4 = new ImageBox()
+            {
+                Image = Image.Load<Rgb24>(@"C:\Users\wamwo\Downloads\congaparrot.gif"),
+                Width = 32,
+                Height = 32,
+                X = 96
+            };
+            ext.Controls.Add(imageBox4);
+            buffer.AddDrawExtension(ext);
         }
     }
 }

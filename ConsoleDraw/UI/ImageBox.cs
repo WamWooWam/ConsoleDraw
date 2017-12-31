@@ -4,6 +4,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -15,7 +16,7 @@ namespace ConsoleDraw.UI
         private IResampler _resampler = new NearestNeighborResampler();
         private int _framePos;
 
-        private List<Rgb24[]> _frames = new List<Rgb24[]>();
+        private List<FrameBuffer> _frames = new List<FrameBuffer>();
 
         public Image<Rgb24> Image
         {
@@ -39,6 +40,8 @@ namespace ConsoleDraw.UI
 
         protected override bool UpdateAlways => Image?.Frames.Count > 1 == true;
 
+        private Stopwatch _watch = Stopwatch.StartNew();
+
         protected override void Draw(FrameBufferGraphics graph)
         {
             int width = Image.Width;
@@ -52,7 +55,8 @@ namespace ConsoleDraw.UI
 
             if (_image.Frames.Count > 1)
             {
-                if(_needsUpdate)
+                Debug.WriteLine(_watch.ElapsedMilliseconds);
+                if (_needsUpdate)
                 {
                     _frames.Clear();
 
@@ -60,15 +64,16 @@ namespace ConsoleDraw.UI
                     {
                         Rgb24[] image = new Rgb24[f.Width * f.Height];
                         f.SavePixelData(image);
-                        _frames.Add(image);
+                        _frames.Add(FrameBuffer.FromImage(image, f.Width, f.Height, true));
                     }
                 }
                 
-                graph.DrawImage(_frames[_framePos], new Point(BorderThickness.Left + Padding.Left, BorderThickness.Top + Padding.Top), width, height);
+                graph.DrawBuffer(_frames[_framePos], new Point(BorderThickness.Left + Padding.Left, BorderThickness.Top + Padding.Top));
                 _framePos += 1;
 
                 if (_framePos >= _image.Frames.Count)
                     _framePos = 0;
+                _watch.Restart();
             }
             else
             {

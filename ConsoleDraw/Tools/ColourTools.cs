@@ -47,11 +47,13 @@ namespace ConsoleDraw.Tools
             }
 
             RGBDosKeys = RGBDosColors.Keys.ToArray();
+            RGBDosKeysCount = RGBDosKeys.Length;
         }
 
         public static Dictionary<Rgb24, FrameBufferPixel> RGBDosColors = new Dictionary<Rgb24, FrameBufferPixel>();
         public static Dictionary<ConsoleColor, Rgb24> CCC = new Dictionary<ConsoleColor, Rgb24>();
         public static Rgb24[] RGBDosKeys;
+        private static int RGBDosKeysCount;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Rgb24 Blend(Rgb24 color, Rgb24 backColor, double amount)
@@ -66,12 +68,12 @@ namespace ConsoleDraw.Tools
         public static double ColorDistance(Rgb24 a, Rgb24 b) => Math.Sqrt(((a.R - b.R) * (a.R - b.R)) + ((a.G - b.G) * (a.G - b.G)) + ((a.B - b.B) * (a.B - b.B)));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int NearestColorIndex(Rgb24 a, Rgb24[] b)
+        public static int NearestColorIndex(Rgb24 a)
         {
             int nearest = 0;
-            for (int i = 0; i < b.Length; i++)
+            for (int i = 0; i < RGBDosKeysCount; i++)
             {
-                if (ColorDistance(a, b[i]) < ColorDistance(a, b[nearest]))
+                if (ColorDistance(a, RGBDosKeys[i]) < ColorDistance(a, RGBDosKeys[nearest]))
                     nearest = i;
             }
             return nearest;

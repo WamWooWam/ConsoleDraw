@@ -24,6 +24,8 @@ namespace ConsoleDraw
 {
     public class FrameBuffer : IDisposable
     {
+        private static bool _goodCitizen = false;
+
         private int _fbWidth = 0; // The internal frame buffer width
         private int _fbHeight = 0; // The internal frame buffer height
         private FrameBufferPixel[,] _previousFrameBuffer; // Storage for the previously drawn framebuffer, aids performance
@@ -31,6 +33,11 @@ namespace ConsoleDraw
         private Thread _drawThread; // The thread we're using to draw
         private Stopwatch _watch = new Stopwatch(); // A stopwatch. For draw time.
         private List<IDrawExtension> _drawExtensions = new List<IDrawExtension>(); // Any loaded draw extensions
+
+        internal static ParallelOptions options = new ParallelOptions()
+        {
+            MaxDegreeOfParallelism = 2
+        };
 
         public bool Running => _running;
 
@@ -51,6 +58,11 @@ namespace ConsoleDraw
         /// The current cursor Y position.
         /// </summary>
         public int Y => Console.CursorTop;
+
+        internal static FrameBuffer FromImage(Rgb24[] image, bool v)
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary>
         /// The draw time of the previous frame in milliseconds
@@ -112,6 +124,12 @@ namespace ConsoleDraw
 
         public void Run()
         {
+            if (!_goodCitizen)
+            {
+                AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
+                _goodCitizen = true;
+            }
+
             Console.CursorVisible = false;
             _running = true;
             _drawThread = new Thread(() =>
@@ -124,15 +142,24 @@ namespace ConsoleDraw
             _drawThread.Start();
         }
 
+        private void CurrentDomain_ProcessExit(object sender, EventArgs e)
+        {
+            // cleanup on exit
+            Stop();
+        }
+
         public void Stop()
         {
             Console.CursorVisible = true;
-            _running = false;
+            Console.ResetColor();
+            Console.Clear();
         }
 
         bool _initialDraw = true;
         ConsoleColor foreground = Console.ForegroundColor;
         ConsoleColor background = Console.BackgroundColor;
+        int cursorPosX = Console.CursorLeft;
+        int cursorPosY = Console.CursorTop;
 
         public void Draw()
         {
@@ -147,11 +174,17 @@ namespace ConsoleDraw
             {
                 for (int x = 0; x < _fbWidth; x++)
                 {
-                    if (!FrameBufferPixel.Equal(_previousFrameBuffer[x, y], _rawFrameBuffer[x, y]))
+                    pix = _rawFrameBuffer[x, y];
+                    if (FrameBufferPixel.NotEqual(_previousFrameBuffer[x, y], pix))
                     {
-                        pix = _rawFrameBuffer[x, y];
+                        _previousFrameBuffer[x, y] = pix;
 
-                        Console.SetCursorPosition(x, y);
+                        if (cursorPosX != x || cursorPosY != y)
+                        {
+                            cursorPosX = x;
+                            cursorPosY = y;
+                            Console.SetCursorPosition(x, y);
+                        }
 
                         if (pix.BackgroundColour != background)
                         {
@@ -167,10 +200,18 @@ namespace ConsoleDraw
 
                         Console.Write(pix.Character);
 
-                        _previousFrameBuffer[x, y] = pix;
+                        cursorPosX++;
+
+                        if (cursorPosX >= _fbWidth)
+                        {
+                            cursorPosY++;
+                            cursorPosX = 0;
+                        }
                     }
                 }
             }
+
+            FrameDrawn?.Invoke(this, null);
 
             if (UseFrameLimiter)
             {
@@ -184,8 +225,6 @@ namespace ConsoleDraw
                 DrawTime += (int)_watch.ElapsedMilliseconds;
                 DrawFPS = 1000 / (DrawTime / (int)DrawnFrames);
             }
-
-            FrameDrawn?.Invoke(this, null);
 
             _initialDraw = false;
             _watch.Reset();
@@ -217,38 +256,35 @@ namespace ConsoleDraw
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void InternalPixelToFramebuffer<TPixel>(TPixel[] pixel, Point point, FrameBufferPixel[,] frameBuffer, int width, int height, bool pseudoGraphics) where TPixel : struct, IPixel<TPixel>
+        public void Resize(int newWidth, int newHeight)
         {
-            Rgb24 col = new Rgb24(0, 0, 0);
-            if (!pseudoGraphics)
+            lock (_rawFrameBuffer)
             {
-                for(int x = 0; x < width; x++)
+                FrameBufferPixel[,] copy = new FrameBufferPixel[_fbWidth, _fbHeight];
+                GetFramebufferCopy(copy);
+
+                int oldWidth = _fbWidth;
+                int oldHeight = _fbHeight;
+
+                _fbWidth = newWidth; _fbHeight = newHeight;
+                _rawFrameBuffer = new FrameBufferPixel[_fbWidth, _fbHeight];
+
+                for (int x = 0; x < _fbWidth; x++)
                 {
-                    IPixel pix;
-                    for (int y = 0; height > y; y++)
+                    for (int y = 0; y < _fbHeight; y++)
                     {
-                        pix = pixel[x + (y * width)];
-                        pix.ToRgb24(ref col);
-                        NonPseudoSetColor(point, frameBuffer, col, x, y);
+                        if (x < oldWidth && y < oldHeight)
+                            _rawFrameBuffer[x, y] = copy[x, y];
+                        else
+                            _rawFrameBuffer[x, y] = new FrameBufferPixel() { BackgroundColour = ConsoleColor.Black, Character = ' ' };
                     }
                 }
-            }
-            else
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    IPixel pix;
-                    for (int y = 0; height > y; y++)
-                    {
-                        pix = pixel[x + (y * width)];
-                        pix.ToRgb24(ref col);
-                        PseudoSetColor(point, frameBuffer, col, x, y);
-                    }
-                }
+
+                _previousFrameBuffer = new FrameBufferPixel[_fbWidth, _fbHeight];
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void InternalImageToFramebuffer<TPixel>(Image<TPixel> image, Point point, FrameBufferPixel[,] frameBuffer, bool pseudoGraphics = true) where TPixel : struct, IPixel<TPixel>
         {
             TPixel[] data = new TPixel[image.Width * image.Height];
@@ -258,7 +294,7 @@ namespace ConsoleDraw
             int height = image.Height;
             if (!pseudoGraphics)
             {
-                Parallel.For(0, width, x =>
+                Parallel.For(0, width, options, x =>
                 {
                     for (int y = 0; height > y; y++)
                     {
@@ -270,7 +306,7 @@ namespace ConsoleDraw
             }
             else
             {
-                Parallel.For(0, width, x =>
+                Parallel.For(0, width, options, x =>
                 {
                     for (int y = 0; height > y; y++)
                     {
@@ -282,20 +318,18 @@ namespace ConsoleDraw
             }
         }
 
-        internal void InternalImageFrameToFramebuffer<TPixel>(ImageFrame<TPixel> image, Point point, FrameBufferPixel[,] frameBuffer, bool pseudoGraphics) where TPixel : struct, IPixel<TPixel>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static void InternalPixelToFramebuffer<TPixel>(TPixel[] pixel, Point point, FrameBufferPixel[,] frameBuffer, int width, int height, bool pseudoGraphics) where TPixel : struct, IPixel<TPixel>
         {
-            TPixel[] data = new TPixel[image.Width * image.Height];
-            image.SavePixelData(data);
             Rgb24 col = new Rgb24(0, 0, 0);
-            int width = image.Width;
-            int height = image.Height;
             if (!pseudoGraphics)
             {
-                Parallel.For(0, width, x =>
+                Parallel.For(0, width, options, x =>
                 {
+                    IPixel pix;
                     for (int y = 0; height > y; y++)
                     {
-                        IPixel pix = data[x + (y * width)];
+                        pix = pixel[x + (y * width)];
                         pix.ToRgb24(ref col);
                         NonPseudoSetColor(point, frameBuffer, col, x, y);
                     }
@@ -303,11 +337,12 @@ namespace ConsoleDraw
             }
             else
             {
-                Parallel.For(0, width, x =>
+                Parallel.For(0, width, options, x =>
                 {
+                    IPixel pix;
                     for (int y = 0; height > y; y++)
                     {
-                        IPixel pix = data[x + (y * width)];
+                        pix = pixel[x + (y * width)];
                         pix.ToRgb24(ref col);
                         PseudoSetColor(point, frameBuffer, col, x, y);
                     }
@@ -333,6 +368,14 @@ namespace ConsoleDraw
             }
         }
 
+
+        internal static FrameBuffer FromImage(Rgb24[] img, int width, int height, bool pseudoGraphics = true)
+        {
+            FrameBuffer fb = new FrameBuffer(width, height);
+            InternalPixelToFramebuffer(img, new Point(0, 0), fb._rawFrameBuffer, width, height, pseudoGraphics);
+            return fb;
+        }
+
 #if NET452 || NET461 
         /// <summary>
         /// Copies a bitmap to a framebuffer
@@ -343,18 +386,18 @@ namespace ConsoleDraw
         /// <param name="pseudoGraphics">Enable or disable pseudo graphics</param>
         internal static void InternalBitmapToFramebuffer(Bitmap bmp, Point point, FrameBufferPixel[,] frameBuffer, bool pseudoGraphics = true)
         {
-            //for (int x = 0; bmp.Width > x; x++)
-            //{
-            //    for (int y = 0; bmp.Height > y; y++)
-            //    {
-            //        try
-            //        {
-            //            System.Drawing.Color col = bmp.GetPixel(x, y);
-            //            SetPixelColor(point, frameBuffer, pseudoGraphics, col, x, y);
-            //        }
-            //        catch { }
-            //    }
-            //}
+            for (int x = 0; bmp.Width > x; x++)
+            {
+                for (int y = 0; bmp.Height > y; y++)
+                {
+                    try
+                    {
+                        System.Drawing.Color col = bmp.GetPixel(x, y);
+                        SetPixelColor(point, frameBuffer, pseudoGraphics, (Color)col, x, y);
+                    }
+                    catch { }
+                }
+            }
         }
 
         /// <summary>
@@ -391,7 +434,7 @@ namespace ConsoleDraw
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void PseudoSetColor(Point point, FrameBufferPixel[,] frameBuffer, Rgb24 col, int x, int y)
         {
-            frameBuffer[x + point.X, y + point.Y] = ColourTools.RGBDosColors[ColourTools.RGBDosKeys[ColourTools.NearestColorIndex(col, ColourTools.RGBDosKeys)]];
+            frameBuffer[x + point.X, y + point.Y] = ColourTools.RGBDosColors[ColourTools.RGBDosKeys[ColourTools.NearestColorIndex(col)]];
         }
 
 
@@ -400,8 +443,8 @@ namespace ConsoleDraw
         {
             frameBuffer[x + point.X, y + point.Y] = new FrameBufferPixel()
             {
-                ForegroundColour = (ConsoleColor)ColourTools.NearestColorIndex(col, ColourTools.RGBDosKeys),
-                BackgroundColour = (ConsoleColor)ColourTools.NearestColorIndex(col, ColourTools.RGBDosKeys),
+                ForegroundColour = (ConsoleColor)ColourTools.NearestColorIndex(col),
+                BackgroundColour = (ConsoleColor)ColourTools.NearestColorIndex(col),
                 Character = ' '
             };
         }

@@ -15,7 +15,7 @@ namespace ConsoleDraw.Extensions
         private FrameBufferGraphics _graphics;
         private Process _process = Process.GetCurrentProcess();
         string _toDraw;
-
+        int prevDrawTime = 0;
         public DebugExtension(FrameBuffer buffer, FrameBufferGraphics graphics)
         {
             _buffer = buffer;
@@ -24,10 +24,10 @@ namespace ConsoleDraw.Extensions
 
         public override void RunExtension()
         {
-            _toDraw = $"Frames Drawn :{_buffer.DrawnFrames}, Draw time: {_buffer.DrawTime.ToString("000")}ms, FPS: {_buffer.DrawFPS.ToString("000")}";
-
-            _graphics.DrawRect(new Rectangle(1, 1, _toDraw.Length, 1), ConsoleColor.White);
-            _graphics.DrawString(_toDraw, new Point(1, 1), ConsoleColor.Black);
+            _toDraw = (_buffer.DrawTime - prevDrawTime).ToString("000");
+            _graphics.DrawString(_toDraw, new Point(1, 1), ConsoleColor.White);
+           
+            prevDrawTime = _buffer.DrawTime;
         }
     }
 }

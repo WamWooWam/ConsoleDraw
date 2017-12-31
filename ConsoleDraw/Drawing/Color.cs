@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SixLabors.ImageSharp.PixelFormats;
+using System;
 
 namespace ConsoleDraw
 {
@@ -31,6 +32,7 @@ namespace ConsoleDraw
         
         public static implicit operator System.Drawing.Color(Color c) => System.Drawing.Color.FromArgb(c.R, c.G, c.B);
         public static implicit operator Color(System.Drawing.Color c) => FromArgb(c.R, c.G, c.B);
+        public static implicit operator Rgb24(Color c) => new Rgb24(c.R, c.G, c.B);
 
     }
 }

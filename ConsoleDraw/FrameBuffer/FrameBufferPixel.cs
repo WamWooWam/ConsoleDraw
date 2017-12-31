@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace ConsoleDraw
@@ -32,9 +33,11 @@ namespace ConsoleDraw
         /// <returns>A <see cref="FrameBufferPixel"/></returns>
         public static FrameBufferPixel FromByte(byte b) => new FrameBufferPixel() { BackgroundColour = (ConsoleColor)b, ForegroundColour = (ConsoleColor)b };
 
-        internal static bool Equal(FrameBufferPixel pix1, FrameBufferPixel pix2)
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static bool NotEqual(FrameBufferPixel pix1, FrameBufferPixel pix2)
         {
-            return pix1 != null ? pix1.Character == pix2.Character && pix1.BackgroundColour == pix2.BackgroundColour && pix1.ForegroundColour == pix2.ForegroundColour : false;
+            return pix1 != null ? pix1.Character != pix2.Character || pix1.BackgroundColour != pix2.BackgroundColour || pix1.ForegroundColour != pix2.ForegroundColour : true;
         }
     }
 }

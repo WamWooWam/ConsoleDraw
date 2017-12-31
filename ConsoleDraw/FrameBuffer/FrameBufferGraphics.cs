@@ -48,16 +48,13 @@ namespace ConsoleDraw
         /// <param name="character">The character to draw with</param>
         public void DrawRect(Rectangle rect, ConsoleColor bgColour, ConsoleColor fgColour = ConsoleColor.Gray, char character = ' ')
         {
-            //if (rect.X + rect.Width < _frameBuffer.Width && rect.Y + rect.Height < _frameBuffer.Height)
-            //{
-            Parallel.For(0, rect.Width, x =>
+            for (int x = 0; x < rect.Width; x++)
             {
                 for (int y = 0; y < rect.Height; y++)
                 {
                     _frameBuffer.RawFrameBuffer[(x + rect.X).Clamp(0, _frameBuffer.Width - 1), (y + rect.Y).Clamp(0, _frameBuffer.Height - 1)] = new FrameBufferPixel() { BackgroundColour = bgColour, ForegroundColour = fgColour, Character = character };
                 }
-            });
-            //}
+            }
         }
 
 
@@ -70,16 +67,74 @@ namespace ConsoleDraw
         {
             if (!buffer.Running)
             {
-                Parallel.For(0, buffer.Width, x =>
+                for (int x = 0; x < buffer.Width; x++)
                 {
                     for (int y = 0; y < buffer.Height; y++)
                     {
                         _frameBuffer.RawFrameBuffer[(x + point.X).Clamp(0, _frameBuffer.Width - 1), (y + point.Y).Clamp(0, _frameBuffer.Height - 1)] = buffer.RawFrameBuffer[x, y];
                     }
-                });
+                }
             }
             else
                 throw new InvalidOperationException("Buffer cannot be running.");
+        }
+
+        /// <summary>
+        /// Copies a rectangle from one place in the current buffer to another.
+        /// </summary>
+        /// <param name="source">The source rectangle</param>
+        /// <param name="destination">The destination rectangle</param>
+        public void Copy(Rectangle source, Rectangle destination)
+        {
+            int srcX;
+            int srcY;
+            int destX;
+            int destY;
+
+            for (int x = 0; x < source.Width; x++)
+            {
+                for (int y = 0; y < source.Height; y++)
+                {
+                    if (x < destination.Width && y < destination.Height)
+                    {
+                        srcX = (x + source.X).Clamp(0, _frameBuffer.Width - 1);
+                        srcY = (y + source.Y).Clamp(0, _frameBuffer.Height - 1);
+                        destX = (x + destination.X).Clamp(0, _frameBuffer.Width - 1);
+                        destY = (y + destination.Y).Clamp(0, _frameBuffer.Height - 1);
+
+                        _frameBuffer.RawFrameBuffer[destX, destY] = _frameBuffer.RawFrameBuffer[srcX, srcY];
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Copies a rectangle from one place in the current buffer to another.
+        /// </summary>
+        /// <param name="source">The source rectangle</param>
+        /// <param name="destination">The destination rectangle</param>
+        public void Copy(FrameBuffer srcBuffer, Rectangle source, FrameBuffer destBuffer, Rectangle destination)
+        {
+            int srcX;
+            int srcY;
+            int destX;
+            int destY;
+
+            for (int x = 0; x < source.Width; x++)
+            {
+                for (int y = 0; y < source.Height; y++)
+                {
+                    if (x < destination.Width && y < destination.Height)
+                    {
+                        srcX = (x + source.X).Clamp(0, srcBuffer.Width - 1);
+                        srcY = (y + source.Y).Clamp(0, srcBuffer.Height - 1);
+                        destX = (x + destination.X).Clamp(0, destBuffer.Width - 1);
+                        destY = (y + destination.Y).Clamp(0, destBuffer.Height - 1);
+
+                        destBuffer.RawFrameBuffer[destX, destY] = srcBuffer.RawFrameBuffer[srcX, srcY];
+                    }
+                }
+            }
         }
 
 #if NET35 || NET40 || NET452 || NET461
@@ -100,12 +155,12 @@ namespace ConsoleDraw
                 throw new InvalidOperationException("Image is too large for buffer");
         }
 #endif
-        
-        internal void DrawImage<TPixel>(TPixel[] pixel, Point point, int width, int height) where TPixel : struct, IPixel<TPixel>
-        {
-            FrameBuffer.InternalPixelToFramebuffer(pixel, point, _frameBuffer.RawFrameBuffer, width, height, PseudoGraphics);
-        }
 
+        /// <summary>
+        /// Draws an image to the current <see cref="FrameBuffer"/>.
+        /// </summary>
+        /// <param name="bmp">The image to draw</param>
+        /// <param name="point">The point to draw the image at</param>
         public void DrawImage<TPixel>(Image<TPixel> bmp, Point point) where TPixel : struct, IPixel<TPixel>
         {
             if (point.X <= _frameBuffer.Width && point.Y <= _frameBuffer.Height && point.X + bmp.Width <= _frameBuffer.Width && point.Y + bmp.Height <= _frameBuffer.Height)
@@ -116,14 +171,9 @@ namespace ConsoleDraw
                 throw new InvalidOperationException("Image is too large for buffer");
         }
 
-        public void DrawImage<TPixel>(ImageFrame<TPixel> bmp, Point point) where TPixel : struct, IPixel<TPixel>
+        internal void DrawImage<TPixel>(TPixel[] pixel, Point point, int width, int height) where TPixel : struct, IPixel<TPixel>
         {
-            if (point.X <= _frameBuffer.Width && point.Y <= _frameBuffer.Height && point.X + bmp.Width <= _frameBuffer.Width && point.Y + bmp.Height <= _frameBuffer.Height)
-            {
-                FrameBuffer.InternalImageFrameToFramebuffer(bmp, point, _frameBuffer.RawFrameBuffer, PseudoGraphics);
-            }
-            else
-                throw new InvalidOperationException("Image is too large for buffer");
+            FrameBuffer.InternalPixelToFramebuffer(pixel, point, _frameBuffer.RawFrameBuffer, width, height, PseudoGraphics);
         }
 
         /// <summary>
@@ -200,7 +250,6 @@ namespace ConsoleDraw
 
             return lines.Count;
         }
-
 
         /// <summary>
         /// Splits a string into lines of a specified length
